@@ -4,14 +4,12 @@ public class Team {
 
     private int id;
     private String name;
-    private int gameId;      // hangi oyun için kuruldu
-    private int maxCapacity; // maksimum oyuncu sayısı
-    private String status;   // "ACTIVE" veya "INACTIVE"
+    private int gameId;
+    private int maxCapacity;
+    private String status;
 
-    // Constructor - boş
     public Team() {}
 
-    // Constructor - parametreli
     public Team(int id, String name, int gameId, int maxCapacity, String status) {
         this.id = id;
         this.name = name;
@@ -20,14 +18,12 @@ public class Team {
         this.status = status;
     }
 
-    // Getters
     public int getId() { return id; }
     public String getName() { return name; }
     public int getGameId() { return gameId; }
     public int getMaxCapacity() { return maxCapacity; }
     public String getStatus() { return status; }
 
-    // Setters
     public void setId(int id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setGameId(int gameId) { this.gameId = gameId; }

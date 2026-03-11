@@ -15,7 +15,6 @@ public class UserDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
-    // Yeni kullanıcı ekle
     public void insert(User user) {
         String sql = "INSERT INTO users (username, password, email, role, status) VALUES (?, ?, ?, ?, ?)";
         try {
@@ -26,13 +25,12 @@ public class UserDAO {
             ps.setString(4, user.getRole());
             ps.setString(5, user.getStatus());
             ps.executeUpdate();
-            System.out.println("Kullanıcı eklendi: " + user.getUsername());
+            System.out.println("User added: " + user.getUsername());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Kullanıcı güncelle
     public void update(User user) {
         String sql = "UPDATE users SET username=?, password=?, email=?, role=?, status=? WHERE id=?";
         try {
@@ -44,26 +42,24 @@ public class UserDAO {
             ps.setString(5, user.getStatus());
             ps.setInt(6, user.getId());
             ps.executeUpdate();
-            System.out.println("Kullanıcı güncellendi: " + user.getUsername());
+            System.out.println("User updated: " + user.getUsername());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Kullanıcı sil
     public void delete(int id) {
         String sql = "DELETE FROM users WHERE id=?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ps.executeUpdate();
-            System.out.println("Kullanıcı silindi. ID: " + id);
+            System.out.println("User deleted. ID: " + id);
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // ID ile kullanıcı getir
     public User getById(int id) {
         String sql = "SELECT * FROM users WHERE id=?";
         try {
@@ -74,12 +70,12 @@ public class UserDAO {
                 return mapResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return null;
     }
 
-    // Tüm kullanıcıları getir
+
     public List<User> getAll() {
         List<User> users = new ArrayList<>();
         String sql = "SELECT * FROM users";
@@ -90,12 +86,11 @@ public class UserDAO {
                 users.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return users;
     }
 
-    // Kullanıcı adı ve şifre ile giriş kontrolü
     public User login(String username, String password) {
         String sql = "SELECT * FROM users WHERE username=? AND password=?";
         try {
@@ -107,12 +102,11 @@ public class UserDAO {
                 return mapResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return null;
     }
 
-    // ResultSet'i User nesnesine çevir
     private User mapResultSet(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id"),

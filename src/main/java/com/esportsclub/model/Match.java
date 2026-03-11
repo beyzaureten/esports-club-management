@@ -3,19 +3,17 @@ package com.esportsclub.model;
 public class Match {
 
     private int id;
-    private int tournamentId;  // hangi turnuvaya ait
-    private int team1Id;       // 1. takım
-    private int team2Id;       // 2. takım
-    private int winnerId;      // kazanan takım (0 ise henüz oynanmadı)
+    private int tournamentId;
+    private int team1Id;
+    private int team2Id;
+    private int winnerId;
     private int team1Score;
     private int team2Score;
     private String matchDate;
-    private String status;     // "SCHEDULED", "ONGOING", "FINISHED"
+    private String status;
 
-    // Constructor - boş
     public Match() {}
 
-    // Constructor - parametreli
     public Match(int id, int tournamentId, int team1Id, int team2Id, int winnerId,
                  int team1Score, int team2Score, String matchDate, String status) {
         this.id = id;

@@ -1,7 +1,7 @@
 package com.esportsclub.service;
 
-import com.esportsclub.dao.TeamMemberDAO;
 import com.esportsclub.dao.TeamDAO;
+import com.esportsclub.dao.TeamMemberDAO;
 import com.esportsclub.model.Team;
 
 import java.util.List;
@@ -14,69 +14,69 @@ public class TeamService {
         this.teamDAO = new TeamDAO();
     }
 
-    // Add new team
+    // Yeni takım ekle
     public boolean addTeam(Team team) {
         if (team.getName() == null || team.getName().trim().isEmpty()) {
-            System.out.println("Error: Team name cannot be empty!");
+            System.out.println("Hata: Takım adı boş olamaz!");
             return false;
         }
         if (team.getMaxCapacity() <= 0) {
-            System.out.println("Error: Capacity must be greater than 0!");
+            System.out.println("Hata: Kapasite 0'dan büyük olmalı!");
             return false;
         }
         teamDAO.insert(team);
         return true;
     }
 
-    // Update team
+    // Takım güncelle
     public boolean updateTeam(Team team) {
         if (team.getName() == null || team.getName().trim().isEmpty()) {
-            System.out.println("Error: Team name cannot be empty!");
+            System.out.println("Hata: Takım adı boş olamaz!");
             return false;
         }
         teamDAO.update(team);
         return true;
     }
 
-    // Delete team
+    // Takım sil
     public void deleteTeam(int id) {
         teamDAO.delete(id);
     }
 
-    // Get team by id
+    // ID ile takım getir
     public Team getTeamById(int id) {
         return teamDAO.getById(id);
     }
 
-    // Get all teams
+    // Tüm takımları getir
     public List<Team> getAllTeams() {
         return teamDAO.getAll();
     }
 
-    // Get teams by game
+    // Oyuna göre takımları getir
     public List<Team> getTeamsByGame(int gameId) {
         return teamDAO.getByGameId(gameId);
     }
 
-    // Check if team is full
+    // Takım kapasitesi dolu mu kontrolü
     public boolean isTeamFull(int teamId) {
         Team team = teamDAO.getById(teamId);
         if (team == null) {
-            System.out.println("Error: Team not found!");
+            System.out.println("Hata: Takım bulunamadı!");
             return true;
         }
-        TeamMemberDAO teamMemberDAO = new TeamMemberDAO();
-        int currentCount = teamMemberDAO.countByTeamId(teamId);
-        return currentCount >= team.getMaxCapacity();
+        // TeamMemberDAO hazır olunca burası güncellenecek
+        // Şimdilik false döndürüyoruz
+        return false;
     }
 
-    // Set team status
+    // Takımı aktif/pasif yap
     public void setTeamStatus(int teamId, String status) {
         Team team = teamDAO.getById(teamId);
         if (team != null) {
             team.setStatus(status);
             teamDAO.update(team);
-            System.out.println("Team status updated: " + status);
+            System.out.println("Takım durumu güncellendi: " + status);
         }
     }
 }

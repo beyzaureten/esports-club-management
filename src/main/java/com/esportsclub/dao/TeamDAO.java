@@ -15,6 +15,7 @@ public class TeamDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
+    // Yeni takım ekle
     public void insert(Team team) {
         String sql = "INSERT INTO teams (name, game_id, max_capacity, status) VALUES (?, ?, ?, ?)";
         try {
@@ -24,12 +25,13 @@ public class TeamDAO {
             ps.setInt(3, team.getMaxCapacity());
             ps.setString(4, team.getStatus());
             ps.executeUpdate();
-            System.out.println("Team added: " + team.getName());
+            System.out.println("Takım eklendi: " + team.getName());
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Hata: " + e.getMessage());
         }
     }
 
+    // Takım güncelle
     public void update(Team team) {
         String sql = "UPDATE teams SET name=?, game_id=?, max_capacity=?, status=? WHERE id=?";
         try {
@@ -40,24 +42,26 @@ public class TeamDAO {
             ps.setString(4, team.getStatus());
             ps.setInt(5, team.getId());
             ps.executeUpdate();
-            System.out.println("Team is updated: " + team.getName());
+            System.out.println("Takım güncellendi: " + team.getName());
         } catch (SQLException e) {
             System.out.println("Hata: " + e.getMessage());
         }
     }
 
+    // Takım sil
     public void delete(int id) {
         String sql = "DELETE FROM teams WHERE id=?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ps.executeUpdate();
-            System.out.println("Team is deleted. ID: " + id);
+            System.out.println("Takım silindi. ID: " + id);
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Hata: " + e.getMessage());
         }
     }
 
+    // ID ile takım getir
     public Team getById(int id) {
         String sql = "SELECT * FROM teams WHERE id=?";
         try {
@@ -68,11 +72,12 @@ public class TeamDAO {
                 return mapResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Hata: " + e.getMessage());
         }
         return null;
     }
 
+    // Tüm takımları getir
     public List<Team> getAll() {
         List<Team> teams = new ArrayList<>();
         String sql = "SELECT * FROM teams";
@@ -83,11 +88,12 @@ public class TeamDAO {
                 teams.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Hata: " + e.getMessage());
         }
         return teams;
     }
 
+    // Oyuna göre takımları getir
     public List<Team> getByGameId(int gameId) {
         List<Team> teams = new ArrayList<>();
         String sql = "SELECT * FROM teams WHERE game_id=?";
@@ -99,11 +105,12 @@ public class TeamDAO {
                 teams.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Hata: " + e.getMessage());
         }
         return teams;
     }
 
+    // ResultSet'i Team nesnesine çevir
     private Team mapResultSet(ResultSet rs) throws SQLException {
         return new Team(
                 rs.getInt("id"),

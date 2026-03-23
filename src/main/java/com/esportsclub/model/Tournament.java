@@ -4,14 +4,16 @@ public class Tournament {
 
     private int id;
     private String name;
-    private int gameId;
-    private int maxTeams;
+    private int gameId;        // hangi oyun için
+    private int maxTeams;      // maksimum takım sayısı
     private String startDate;
     private String endDate;
-    private String status;
+    private String status;     // "UPCOMING", "ONGOING", "FINISHED"
 
+    // Constructor - boş
     public Tournament() {}
 
+    // Constructor - parametreli
     public Tournament(int id, String name, int gameId, int maxTeams, String startDate, String endDate, String status) {
         this.id = id;
         this.name = name;
@@ -22,6 +24,7 @@ public class Tournament {
         this.status = status;
     }
 
+    // Getters
     public int getId() { return id; }
     public String getName() { return name; }
     public int getGameId() { return gameId; }
@@ -30,6 +33,7 @@ public class Tournament {
     public String getEndDate() { return endDate; }
     public String getStatus() { return status; }
 
+    // Setters
     public void setId(int id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setGameId(int gameId) { this.gameId = gameId; }

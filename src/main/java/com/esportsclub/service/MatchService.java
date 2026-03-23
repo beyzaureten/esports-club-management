@@ -91,4 +91,4 @@ public class MatchService {
         if (match == null) return false;
         return match.getStatus().equals("FINISHED");
     }
-}
+}   

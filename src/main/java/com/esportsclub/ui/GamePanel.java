@@ -26,7 +26,6 @@ public class GamePanel extends JPanel {
     private static final Color GREEN      = new Color(16, 185, 129);
     private static final Color RED        = new Color(220, 38, 38);
     private static final Color BLUE       = new Color(59, 130, 246);
-    private static final Color PURPLE     = new Color(124, 58, 237);
     private static final Color TEXT_MAIN  = new Color(30, 27, 46);
     private static final Color TEXT_DIM   = new Color(120, 110, 150);
     private static final Color ROW_ODD    = new Color(255, 252, 255);
@@ -35,6 +34,14 @@ public class GamePanel extends JPanel {
     private static final Color BORDER_DIM = new Color(220, 215, 240);
     private static final Color INPUT_BG   = new Color(250, 249, 255);
 
+    private static final String[] GENRES = {
+            "FPS", "MOBA", "Battle Royale", "Sports", "RPG",
+            "Strategy", "Racing", "Fighting", "Simulation", "Other"
+    };
+    private static final String[] MODES = {
+            "1v1", "2v2", "3v3", "4v4", "5v5", "Solo", "Co-op", "Team", "Other"
+    };
+
     private final GameService gameService = new GameService();
 
     private JTable               table;
@@ -42,11 +49,12 @@ public class GamePanel extends JPanel {
     private TableRowSorter<DefaultTableModel> sorter;
 
     private JTextField        fldSearch;
-    private JComboBox<String> cmbGenre;
+    private JComboBox<String> cmbGenreFilter;
 
-    private JTextField fldId, fldName, fldGenre, fldMode;
-    private JButton    btnAdd, btnUpdate, btnDelete, btnClear;
-    private JLabel     lblCount;
+    private JTextField        fldId, fldName;
+    private JComboBox<String> cmbGenreForm;
+    private JComboBox<String> cmbModeForm;
+    private JLabel            lblCount;
 
     public GamePanel() {
         setLayout(new BorderLayout(0, 0));
@@ -82,9 +90,9 @@ public class GamePanel extends JPanel {
         filters.add(fldSearch);
 
         filters.add(sLbl("Genre:"));
-        cmbGenre = lightCombo(new String[]{}, 120);
-        cmbGenre.addActionListener(e -> applyFilter());
-        filters.add(cmbGenre);
+        cmbGenreFilter = lightCombo(new String[]{}, 120);
+        cmbGenreFilter.addActionListener(e -> applyFilter());
+        filters.add(cmbGenreFilter);
 
         JButton btnRefresh = solidBtn("Refresh", BLUE, 90);
         btnRefresh.addActionListener(e -> loadAll());
@@ -160,21 +168,26 @@ public class GamePanel extends JPanel {
         GridBagConstraints g = new GridBagConstraints();
         g.fill = GridBagConstraints.HORIZONTAL;
         g.insets = new Insets(4, 6, 4, 6);
-        g.gridy = 0;
 
+        g.gridy = 0;
         g.gridx = 0; g.weightx = 0.06; form.add(fLbl("ID"), g);
         g.gridx = 1; g.weightx = 0.12;
         fldId = new JTextField(); fldId.setEditable(false);
         styleField(fldId); fldId.setBackground(new Color(240, 238, 250));
         form.add(fldId, g);
         g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Game Name *"), g);
-        g.gridx = 3; g.weightx = 0.35; fldName = new JTextField(); styleField(fldName); form.add(fldName, g);
+        g.gridx = 3; g.weightx = 0.35;
+        fldName = new JTextField(); styleField(fldName); form.add(fldName, g);
 
         g.gridy = 1;
         g.gridx = 0; g.weightx = 0.06; form.add(fLbl("Genre *"), g);
-        g.gridx = 1; g.weightx = 0.12; fldGenre = new JTextField(); styleField(fldGenre); form.add(fldGenre, g);
+        g.gridx = 1; g.weightx = 0.12;
+        cmbGenreForm = lightCombo(GENRES, 0);
+        form.add(cmbGenreForm, g);
         g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Mode *"), g);
-        g.gridx = 3; g.weightx = 0.35; fldMode = new JTextField(); styleField(fldMode); form.add(fldMode, g);
+        g.gridx = 3; g.weightx = 0.35;
+        cmbModeForm = lightCombo(MODES, 0);
+        form.add(cmbModeForm, g);
 
         wrap.add(form, BorderLayout.CENTER);
 
@@ -185,10 +198,10 @@ public class GamePanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
 
-        btnAdd    = solidBtn("+ Add Game", GREEN,                          110);
-        btnUpdate = solidBtn("Update",     BLUE,                           90);
-        btnDelete = solidBtn("Delete",     RED,                            90);
-        btnClear  = solidBtn("Clear",      new Color(150, 140, 180),       80);
+        JButton btnAdd    = solidBtn("+ Add Game", GREEN,                    110);
+        JButton btnUpdate = solidBtn("Update",     BLUE,                      90);
+        JButton btnDelete = solidBtn("Delete",     RED,                       90);
+        JButton btnClear  = solidBtn("Clear",      new Color(150, 140, 180),  80);
 
         btnAdd.addActionListener(e    -> doAdd());
         btnUpdate.addActionListener(e -> doUpdate());
@@ -209,11 +222,9 @@ public class GamePanel extends JPanel {
 
     private void doAdd() {
         String name  = fldName.getText().trim();
-        String genre = fldGenre.getText().trim();
-        String mode  = fldMode.getText().trim();
-        if (name.isEmpty() || genre.isEmpty() || mode.isEmpty()) {
-            warn("Please fill in all required fields."); return;
-        }
+        String genre = cmbGenreForm.getSelectedItem().toString();
+        String mode  = cmbModeForm.getSelectedItem().toString();
+        if (name.isEmpty()) { warn("Game name is required."); return; }
         if (gameService.addGame(name, genre, mode)) {
             info("Game \"" + name + "\" added."); clearForm(); loadAll();
         } else { error("Failed to add game. A game with this name may already exist."); }
@@ -222,11 +233,9 @@ public class GamePanel extends JPanel {
     private void doUpdate() {
         if (fldId.getText().trim().isEmpty()) { warn("Select a game first."); return; }
         String name  = fldName.getText().trim();
-        String genre = fldGenre.getText().trim();
-        String mode  = fldMode.getText().trim();
-        if (name.isEmpty() || genre.isEmpty() || mode.isEmpty()) {
-            warn("Please fill in all required fields."); return;
-        }
+        String genre = cmbGenreForm.getSelectedItem().toString();
+        String mode  = cmbModeForm.getSelectedItem().toString();
+        if (name.isEmpty()) { warn("Game name is required."); return; }
         try {
             Game g = new Game(Integer.parseInt(fldId.getText().trim()), name, genre, mode);
             if (gameService.updateGame(g)) { info("Game updated."); clearForm(); loadAll(); }
@@ -260,7 +269,7 @@ public class GamePanel extends JPanel {
 
     private void applyFilter() {
         String kw     = fldSearch.getText().trim();
-        Object genSel = cmbGenre.getSelectedItem();
+        Object genSel = cmbGenreFilter.getSelectedItem();
         String genre  = (genSel == null || "All Genres".equals(genSel)) ? "" : genSel.toString();
 
         RowFilter<DefaultTableModel, Object> f = RowFilter.andFilter(Arrays.asList(
@@ -272,11 +281,11 @@ public class GamePanel extends JPanel {
     }
 
     private void refreshGenreCombo(List<Game> games) {
-        Object cur = cmbGenre.getSelectedItem();
-        cmbGenre.removeAllItems();
-        cmbGenre.addItem("All Genres");
-        games.stream().map(Game::getGenre).distinct().sorted().forEach(cmbGenre::addItem);
-        if (cur != null) cmbGenre.setSelectedItem(cur);
+        Object cur = cmbGenreFilter.getSelectedItem();
+        cmbGenreFilter.removeAllItems();
+        cmbGenreFilter.addItem("All Genres");
+        games.stream().map(Game::getGenre).distinct().sorted().forEach(cmbGenreFilter::addItem);
+        if (cur != null) cmbGenreFilter.setSelectedItem(cur);
     }
 
     private void fillForm() {
@@ -285,13 +294,28 @@ public class GamePanel extends JPanel {
         int mr = table.convertRowIndexToModel(row);
         fldId.setText(model.getValueAt(mr, 0).toString());
         fldName.setText(model.getValueAt(mr, 1).toString());
-        fldGenre.setText(model.getValueAt(mr, 2).toString());
-        fldMode.setText(model.getValueAt(mr, 3).toString());
+        String genre = model.getValueAt(mr, 2).toString();
+        String mode  = model.getValueAt(mr, 3).toString();
+        // Genre combobox'ta yoksa ekle
+        boolean foundGenre = false;
+        for (int i = 0; i < cmbGenreForm.getItemCount(); i++) {
+            if (cmbGenreForm.getItemAt(i).equals(genre)) { cmbGenreForm.setSelectedIndex(i); foundGenre = true; break; }
+        }
+        if (!foundGenre) { cmbGenreForm.addItem(genre); cmbGenreForm.setSelectedItem(genre); }
+        // Mode combobox'ta yoksa ekle
+        boolean foundMode = false;
+        for (int i = 0; i < cmbModeForm.getItemCount(); i++) {
+            if (cmbModeForm.getItemAt(i).equals(mode)) { cmbModeForm.setSelectedIndex(i); foundMode = true; break; }
+        }
+        if (!foundMode) { cmbModeForm.addItem(mode); cmbModeForm.setSelectedItem(mode); }
     }
 
     private void clearForm() {
-        fldId.setText(""); fldName.setText(""); fldGenre.setText(""); fldMode.setText("");
-        table.clearSelection(); fldName.requestFocus();
+        fldId.setText(""); fldName.setText("");
+        cmbGenreForm.setSelectedIndex(0);
+        cmbModeForm.setSelectedIndex(0);
+        table.clearSelection();
+        fldName.requestFocus();
     }
 
     private void styleField(JTextField f) {

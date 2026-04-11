@@ -10,10 +10,8 @@ public class Tournament {
     private String endDate;
     private String status;     // "UPCOMING", "ONGOING", "FINISHED"
 
-    // Constructor - boş
     public Tournament() {}
 
-    // Constructor - parametreli
     public Tournament(int id, String name, int gameId, int maxTeams, String startDate, String endDate, String status) {
         this.id = id;
         this.name = name;

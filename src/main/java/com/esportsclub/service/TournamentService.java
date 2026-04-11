@@ -123,7 +123,6 @@ public class TournamentService {
         }
     }
 
-    // Remove team from tournament
     public void removeTeamFromTournament(int id) {
         try {
             tournamentTeamDAO.delete(id);
@@ -133,7 +132,6 @@ public class TournamentService {
         }
     }
 
-    // Get all teams in a tournament
     public List<TournamentTeam> getTeamsInTournament(int tournamentId) {
         try {
             return tournamentTeamDAO.getByTournamentId(tournamentId);
@@ -143,7 +141,6 @@ public class TournamentService {
         }
     }
 
-    // Update tournament status
     public void setTournamentStatus(int tournamentId, String status) {
         try {
             Tournament tournament = tournamentDAO.getById(tournamentId);

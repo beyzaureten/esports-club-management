@@ -14,7 +14,6 @@ public class TeamService {
         this.teamDAO = new TeamDAO();
     }
 
-    // Yeni takım ekle
     public boolean addTeam(Team team) {
         if (team.getName() == null || team.getName().trim().isEmpty()) {
             System.out.println("Hata: Takım adı boş olamaz!");
@@ -28,7 +27,6 @@ public class TeamService {
         return true;
     }
 
-    // Takım güncelle
     public boolean updateTeam(Team team) {
         if (team.getName() == null || team.getName().trim().isEmpty()) {
             System.out.println("Hata: Takım adı boş olamaz!");
@@ -38,39 +36,31 @@ public class TeamService {
         return true;
     }
 
-    // Takım sil
     public void deleteTeam(int id) {
         teamDAO.delete(id);
     }
 
-    // ID ile takım getir
     public Team getTeamById(int id) {
         return teamDAO.getById(id);
     }
 
-    // Tüm takımları getir
     public List<Team> getAllTeams() {
         return teamDAO.getAll();
     }
 
-    // Oyuna göre takımları getir
     public List<Team> getTeamsByGame(int gameId) {
         return teamDAO.getByGameId(gameId);
     }
 
-    // Takım kapasitesi dolu mu kontrolü
     public boolean isTeamFull(int teamId) {
         Team team = teamDAO.getById(teamId);
         if (team == null) {
             System.out.println("Hata: Takım bulunamadı!");
             return true;
         }
-        // TeamMemberDAO hazır olunca burası güncellenecek
-        // Şimdilik false döndürüyoruz
         return false;
     }
 
-    // Takımı aktif/pasif yap
     public void setTeamStatus(int teamId, String status) {
         Team team = teamDAO.getById(teamId);
         if (team != null) {

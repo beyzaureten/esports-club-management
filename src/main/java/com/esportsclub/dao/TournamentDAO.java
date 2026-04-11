@@ -15,7 +15,7 @@ public class TournamentDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
-    // Yeni turnuva ekle
+    // Add new tournament
     public void insert(Tournament tournament) {
         String sql = "INSERT INTO tournaments (name, game_id, max_teams, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)";
         try {
@@ -27,13 +27,13 @@ public class TournamentDAO {
             ps.setString(5, tournament.getEndDate());
             ps.setString(6, tournament.getStatus());
             ps.executeUpdate();
-            System.out.println("Turnuva eklendi: " + tournament.getName());
+            System.out.println("Tournament added: " + tournament.getName());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Turnuva güncelle
+    // Update tournament
     public void update(Tournament tournament) {
         String sql = "UPDATE tournaments SET name=?, game_id=?, max_teams=?, start_date=?, end_date=?, status=? WHERE id=?";
         try {
@@ -46,26 +46,25 @@ public class TournamentDAO {
             ps.setString(6, tournament.getStatus());
             ps.setInt(7, tournament.getId());
             ps.executeUpdate();
-            System.out.println("Turnuva güncellendi: " + tournament.getName());
+            System.out.println("Tournament updated: " + tournament.getName());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Turnuva sil
+    // Delete tournament
     public void delete(int id) {
         String sql = "DELETE FROM tournaments WHERE id=?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ps.executeUpdate();
-            System.out.println("Turnuva silindi. ID: " + id);
+            System.out.println("Tournament deleted. ID: " + id);
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // ID ile turnuva getir
     public Tournament getById(int id) {
         String sql = "SELECT * FROM tournaments WHERE id=?";
         try {
@@ -76,12 +75,11 @@ public class TournamentDAO {
                 return mapResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return null;
     }
 
-    // Tüm turnuvaları getir
     public List<Tournament> getAll() {
         List<Tournament> tournaments = new ArrayList<>();
         String sql = "SELECT * FROM tournaments";
@@ -92,12 +90,11 @@ public class TournamentDAO {
                 tournaments.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return tournaments;
     }
 
-    // Duruma göre turnuvaları getir
     public List<Tournament> getByStatus(String status) {
         List<Tournament> tournaments = new ArrayList<>();
         String sql = "SELECT * FROM tournaments WHERE status=?";
@@ -109,12 +106,11 @@ public class TournamentDAO {
                 tournaments.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return tournaments;
     }
 
-    // ResultSet'i Tournament nesnesine çevir
     private Tournament mapResultSet(ResultSet rs) throws SQLException {
         return new Tournament(
                 rs.getInt("id"),

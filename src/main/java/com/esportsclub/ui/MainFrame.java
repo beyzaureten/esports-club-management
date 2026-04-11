@@ -55,7 +55,7 @@ public class MainFrame extends JFrame {
     public MainFrame() {
         super("E-Sports & Gaming Club Management System  v1.0");
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        setSize(1280, 780);
+        setSize(1200, 720);
         setMinimumSize(new Dimension(960, 620));
         setLocationRelativeTo(null);
         getContentPane().setBackground(BG_MAIN);
@@ -134,7 +134,6 @@ public class MainFrame extends JFrame {
         bottomPanel.setBackground(SIDEBAR_BG);
         bottomPanel.setBorder(new EmptyBorder(0, 10, 16, 10));
 
-        // Profil kartı
         profileCard = new JPanel(new BorderLayout(10, 0));
         profileCard.setBackground(new Color(22, 10, 60));
         profileCard.setBorder(BorderFactory.createCompoundBorder(
@@ -344,14 +343,12 @@ public class MainFrame extends JFrame {
 
         sidebar.setVisible(true);
 
-        // Profil kartı
         profileAvatar.setText(String.valueOf(user.getUsername().charAt(0)).toUpperCase());
         profileName.setText(user.getUsername());
         profileRole.setText(user.getRole());
         profileRole.setForeground(isAdmin ? new Color(167, 139, 250) : new Color(16, 185, 129));
         profileCard.setVisible(true);
 
-        // Admin kontrolü
         btnTeam.setEnabled(isAdmin);
         btnGame.setEnabled(isAdmin);
         btnTournament.setEnabled(true);
@@ -365,7 +362,6 @@ public class MainFrame extends JFrame {
             btnGame.setForeground(dim);
         }
 
-        // Form görünürlüğü
         matchPanel.setAdminMode(isAdmin);
         tournamentPanel.setAdminMode(isAdmin);
 

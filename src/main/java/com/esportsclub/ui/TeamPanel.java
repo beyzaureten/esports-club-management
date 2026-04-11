@@ -6,8 +6,10 @@ import com.esportsclub.factory.TeamFactory;
 import com.esportsclub.model.Game;
 import com.esportsclub.model.Team;
 import com.esportsclub.model.TeamMember;
+import com.esportsclub.model.User;
 import com.esportsclub.service.GameService;
 import com.esportsclub.service.TeamService;
+import com.esportsclub.service.UserService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,6 +21,7 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,6 +37,7 @@ public class TeamPanel extends JPanel {
     private static final Color BLUE       = new Color(59, 130, 246);
     private static final Color YELLOW     = new Color(245, 158, 11);
     private static final Color PURPLE     = new Color(139, 92, 246);
+    private static final Color ORANGE     = new Color(249, 115, 22);
     private static final Color TEXT_MAIN  = new Color(30, 27, 46);
     private static final Color TEXT_DIM   = new Color(120, 110, 150);
     private static final Color ROW_ODD    = new Color(252, 251, 255);
@@ -44,6 +48,7 @@ public class TeamPanel extends JPanel {
 
     private final TeamService   teamService = new TeamService();
     private final GameService   gameService = new GameService();
+    private final UserService   userService = new UserService();
     private final TeamMemberDAO memberDAO   = new TeamMemberDAO();
 
     private JTable            teamTable;
@@ -64,6 +69,9 @@ public class TeamPanel extends JPanel {
     private JSpinner          spnCapacity;
     private JComboBox<String> cmbStatusForm;
     private JComboBox<String> cmbQuickType;
+
+    private JComboBox<String> cmbAddUser;
+    private List<User>        loadedUsers;
 
     private JLabel lblCount;
 
@@ -194,18 +202,15 @@ public class TeamPanel extends JPanel {
         sp.getViewport().setBackground(BG_TABLE);
         sp.setBorder(null);
 
-        // Boş durum paneli
         JPanel emptyPanel = new JPanel(new GridBagLayout());
         emptyPanel.setBackground(BG_TABLE);
         GridBagConstraints ec = new GridBagConstraints();
         ec.gridx = 0; ec.gridy = GridBagConstraints.RELATIVE;
         ec.insets = new Insets(6, 0, 6, 0);
-
         JLabel emptyText = new JLabel("No teams found");
         emptyText.setFont(new Font("Arial", Font.BOLD, 15));
         emptyText.setForeground(ACCENT);
         emptyPanel.add(emptyText, ec);
-
         JLabel emptySub = new JLabel("Add a new team using the form below");
         emptySub.setFont(new Font("Arial", Font.PLAIN, 12));
         emptySub.setForeground(TEXT_DIM);
@@ -223,13 +228,34 @@ public class TeamPanel extends JPanel {
         p.setBackground(BG_PANEL);
         p.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_DIM));
 
+        JPanel topRow = new JPanel(new BorderLayout(10, 0));
+        topRow.setOpaque(false);
+        topRow.setBorder(new EmptyBorder(6, 8, 4, 8));
+
         lblMemberTitle = new JLabel("  Team Members  —  select a team to view members");
         lblMemberTitle.setFont(new Font("Arial", Font.BOLD, 12));
         lblMemberTitle.setForeground(PURPLE);
-        lblMemberTitle.setBorder(new EmptyBorder(6, 8, 4, 0));
-        p.add(lblMemberTitle, BorderLayout.NORTH);
+        topRow.add(lblMemberTitle, BorderLayout.WEST);
 
-        String[] cols = {"Member ID", "Team ID", "User ID", "Join Date"};
+        JPanel addMemberRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        addMemberRow.setOpaque(false);
+
+        addMemberRow.add(sLbl("Add Member:"));
+        cmbAddUser = lightCombo(new String[]{}, 160);
+        addMemberRow.add(cmbAddUser);
+
+        JButton btnAddMember = solidBtn("+ Add", ORANGE, 80);
+        btnAddMember.addActionListener(e -> doAddMember());
+        addMemberRow.add(btnAddMember);
+
+        JButton btnRemoveMember = solidBtn("Remove", RED, 85);
+        btnRemoveMember.addActionListener(e -> doRemoveMember());
+        addMemberRow.add(btnRemoveMember);
+
+        topRow.add(addMemberRow, BorderLayout.EAST);
+        p.add(topRow, BorderLayout.NORTH);
+
+        String[] cols = {"Member ID", "Username", "Join Date"};
         memberModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -300,11 +326,11 @@ public class TeamPanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
 
-        JButton btnAdd      = solidBtn("+ Add",    GREEN,                    90);
-        JButton btnUpdate   = solidBtn("Update",   BLUE,                     90);
-        JButton btnDelete   = solidBtn("Delete",   RED,                      90);
-        JButton btnClear    = solidBtn("Clear",    new Color(150, 140, 180), 80);
-        JButton btnQuickAdd = solidBtn("Quick Add",YELLOW,                   95);
+        JButton btnAdd      = solidBtn("+ Add",     GREEN,                    90);
+        JButton btnUpdate   = solidBtn("Update",    BLUE,                     90);
+        JButton btnDelete   = solidBtn("Delete",    RED,                      90);
+        JButton btnClear    = solidBtn("Clear",     new Color(150, 140, 180), 80);
+        JButton btnQuickAdd = solidBtn("Quick Add", YELLOW,                   95);
 
         btnAdd.addActionListener(e      -> doAdd());
         btnUpdate.addActionListener(e   -> doUpdate());
@@ -324,6 +350,50 @@ public class TeamPanel extends JPanel {
         btnRow.add(lblCount, BorderLayout.EAST);
         wrap.add(btnRow, BorderLayout.SOUTH);
         return wrap;
+    }
+
+    private void doAddMember() {
+        if (fldId.getText().trim().isEmpty()) { warn("Please select a team first."); return; }
+        Object selected = cmbAddUser.getSelectedItem();
+        if (selected == null || selected.toString().startsWith("—")) {
+            warn("Please select a user to add."); return;
+        }
+        try {
+            int teamId = Integer.parseInt(fldId.getText().trim());
+            int userId = Integer.parseInt(selected.toString().replaceAll(".*\\[id=(\\d+)\\].*", "$1"));
+
+            int cur = memberDAO.countByTeamId(teamId);
+            int max = (int) spnCapacity.getValue();
+            if (cur >= max) { warn("Team is full! Max capacity: " + max); return; }
+
+            List<TeamMember> existing = memberDAO.getByTeamId(teamId);
+            boolean alreadyMember = existing.stream().anyMatch(m -> m.getUserId() == userId);
+            if (alreadyMember) { warn("This user is already a member of this team."); return; }
+
+            String joinDate = LocalDate.now().toString();
+            TeamMember member = new TeamMember(0, teamId, userId, joinDate);
+            if (memberDAO.insert(member)) {
+                info("Member added successfully.");
+                loadMembers(); loadAll();
+            } else { error("Failed to add member."); }
+        } catch (NumberFormatException ex) { error("Invalid ID."); }
+    }
+
+    private void doRemoveMember() {
+        int selectedRow = memberTable.getSelectedRow();
+        if (selectedRow < 0) { warn("Please select a member to remove."); return; }
+        int memberId = Integer.parseInt(memberModel.getValueAt(selectedRow, 0).toString());
+        String username = memberModel.getValueAt(selectedRow, 1).toString();
+
+        boolean confirmed = ConfirmDialog.showDeleteConfirm(this,
+                "Remove Member",
+                "Are you sure you want to remove \"" + username + "\" from this team?");
+        if (!confirmed) return;
+
+        if (memberDAO.delete(memberId)) {
+            info("Member removed.");
+            loadMembers(); loadAll();
+        } else { error("Failed to remove member."); }
     }
 
     private void doAdd() {
@@ -378,7 +448,7 @@ public class TeamPanel extends JPanel {
         try {
             int id = Integer.parseInt(fldId.getText().trim());
             boolean hasMem = memberDAO.countByTeamId(id) > 0;
-            String extra = hasMem ? "\n\nWarning: this team has members." : "";
+            String extra = hasMem ? "<br>Warning: this team has members." : "";
             boolean confirmed = ConfirmDialog.showDeleteConfirm(this,
                     "Delete Team",
                     "Are you sure you want to delete \"" + fldName.getText().trim() + "\"?" + extra);
@@ -392,6 +462,7 @@ public class TeamPanel extends JPanel {
         teamModel.setRowCount(0);
         List<Team> teams = teamService.getAllTeams();
         List<Game> games = gameService.getAllGames();
+        loadedUsers = userService.getAllUsers();
 
         for (Team t : teams) {
             String gameName = games.stream()
@@ -414,9 +485,13 @@ public class TeamPanel extends JPanel {
         games.forEach(g -> cmbGame.addItem(g.getName() + "  [id=" + g.getId() + "]"));
         if (curGC != null) cmbGame.setSelectedItem(curGC);
 
-        lblCount.setText("  Showing " + teamModel.getRowCount() + " teams   ");
+        // Kullanıcı comboboxunu güncelle
+        cmbAddUser.removeAllItems();
+        cmbAddUser.addItem("— Select User —");
+        for (User u : loadedUsers)
+            cmbAddUser.addItem(u.getUsername() + " [id=" + u.getId() + "]");
 
-        // Boş durum kontrolü
+        lblCount.setText("  Showing " + teamModel.getRowCount() + " teams   ");
         CardLayout cl = (CardLayout) teamTableWrapper.getLayout();
         cl.show(teamTableWrapper, teamModel.getRowCount() == 0 ? "empty" : "table");
     }
@@ -433,7 +508,6 @@ public class TeamPanel extends JPanel {
                 game.isEmpty()       ? RowFilter.regexFilter(".*") : RowFilter.regexFilter("(?i)" + game, 2)
         )));
         lblCount.setText("  Showing " + teamTable.getRowCount() + " of " + teamModel.getRowCount() + " teams   ");
-
         CardLayout cl = (CardLayout) teamTableWrapper.getLayout();
         cl.show(teamTableWrapper, teamTable.getRowCount() == 0 ? "empty" : "table");
     }
@@ -449,8 +523,15 @@ public class TeamPanel extends JPanel {
             List<TeamMember> members = memberDAO.getByTeamId(id);
             lblMemberTitle.setText("  Members of \"" + fldName.getText().trim()
                     + "\"  (" + members.size() + " member" + (members.size() != 1 ? "s" : "") + ")");
-            for (TeamMember m : members)
-                memberModel.addRow(new Object[]{m.getId(), m.getTeamId(), m.getUserId(), m.getJoinDate()});
+            for (TeamMember m : members) {
+                String username = loadedUsers == null ? "User " + m.getUserId() :
+                        loadedUsers.stream()
+                                .filter(u -> u.getId() == m.getUserId())
+                                .map(User::getUsername)
+                                .findFirst()
+                                .orElse("User " + m.getUserId());
+                memberModel.addRow(new Object[]{m.getId(), username, m.getJoinDate()});
+            }
         } catch (NumberFormatException ignored) {}
     }
 

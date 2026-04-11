@@ -9,10 +9,8 @@ public class User {
     private String role; // "ADMIN" veya "MEMBER"
     private String status; // "ACTIVE" veya "INACTIVE"
 
-    // Constructor - boş
     public User() {}
 
-    // Constructor - parametreli
     public User(int id, String username, String password, String email, String role, String status) {
         this.id = id;
         this.username = username;

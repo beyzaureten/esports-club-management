@@ -16,13 +16,7 @@ public class ConfirmDialog {
     private static final Color TEXT_DIM   = new Color(120, 110, 150);
     private static final Color BORDER_DIM = new Color(220, 215, 240);
 
-    /**
-     * Özel silme onayı diyaloğu gösterir.
-     * @param parent  üst bileşen
-     * @param title   diyalog başlığı
-     * @param message açıklama mesajı
-     * @return true = kullanıcı onayladı, false = iptal etti
-     */
+
     public static boolean showDeleteConfirm(Component parent, String title, String message) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), title,
                 java.awt.Dialog.ModalityType.APPLICATION_MODAL);
@@ -38,7 +32,6 @@ public class ConfirmDialog {
                 BorderFactory.createLineBorder(new Color(220, 38, 38, 80), 1),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)));
 
-        // Başlık
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(new Color(254, 242, 242));
         header.setBorder(BorderFactory.createCompoundBorder(
@@ -52,7 +45,6 @@ public class ConfirmDialog {
 
         main.add(header, BorderLayout.NORTH);
 
-        // Mesaj
         JPanel msgPanel = new JPanel(new BorderLayout());
         msgPanel.setBackground(BG);
         msgPanel.setBorder(new EmptyBorder(16, 20, 16, 20));
@@ -64,7 +56,6 @@ public class ConfirmDialog {
 
         main.add(msgPanel, BorderLayout.CENTER);
 
-        // Butonlar
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         btnPanel.setBackground(new Color(250, 249, 255));
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_DIM));

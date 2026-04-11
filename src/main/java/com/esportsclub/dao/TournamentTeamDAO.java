@@ -15,7 +15,6 @@ public class TournamentTeamDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
-    // Add team to tournament
     public void insert(TournamentTeam tournamentTeam) {
         String sql = "INSERT INTO tournament_teams (tournament_id, team_id, registration_date) VALUES (?, ?, ?)";
         try {
@@ -30,7 +29,6 @@ public class TournamentTeamDAO {
         }
     }
 
-    // Remove team from tournament
     public void delete(int id) {
         String sql = "DELETE FROM tournament_teams WHERE id=?";
         try {
@@ -43,7 +41,6 @@ public class TournamentTeamDAO {
         }
     }
 
-    // Get all teams in a tournament
     public List<TournamentTeam> getByTournamentId(int tournamentId) {
         List<TournamentTeam> list = new ArrayList<>();
         String sql = "SELECT * FROM tournament_teams WHERE tournament_id=?";
@@ -60,7 +57,6 @@ public class TournamentTeamDAO {
         return list;
     }
 
-    // Get all tournaments a team is in
     public List<TournamentTeam> getByTeamId(int teamId) {
         List<TournamentTeam> list = new ArrayList<>();
         String sql = "SELECT * FROM tournament_teams WHERE team_id=?";
@@ -77,7 +73,6 @@ public class TournamentTeamDAO {
         return list;
     }
 
-    // Count teams in a tournament
     public int countByTournamentId(int tournamentId) {
         String sql = "SELECT COUNT(*) as total FROM tournament_teams WHERE tournament_id=?";
         try {
@@ -93,7 +88,6 @@ public class TournamentTeamDAO {
         return 0;
     }
 
-    // Get all
     public List<TournamentTeam> getAll() {
         List<TournamentTeam> list = new ArrayList<>();
         String sql = "SELECT * FROM tournament_teams";

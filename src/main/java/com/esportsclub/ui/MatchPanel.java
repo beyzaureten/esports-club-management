@@ -1,7 +1,11 @@
 package com.esportsclub.ui;
 
 import com.esportsclub.model.Match;
+import com.esportsclub.model.Team;
+import com.esportsclub.model.Tournament;
 import com.esportsclub.service.MatchService;
+import com.esportsclub.service.TeamService;
+import com.esportsclub.service.TournamentService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -10,6 +14,11 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 public class MatchPanel extends JPanel {
@@ -32,15 +41,28 @@ public class MatchPanel extends JPanel {
     private static final Color BORDER_DIM = new Color(220, 215, 240);
     private static final Color INPUT_BG   = new Color(250, 249, 255);
 
-    private final MatchService matchService = new MatchService();
+    private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd");
+
+    private final MatchService      matchService      = new MatchService();
+    private final TeamService       teamService       = new TeamService();
+    private final TournamentService tournamentService = new TournamentService();
 
     private JTable            matchTable;
     private DefaultTableModel tableModel;
     private JPanel            formPanel;
 
-    private JTextField tournamentIdField, team1IdField, team2IdField;
-    private JTextField matchDateField, winnerIdField;
-    private JTextField team1ScoreField, team2ScoreField, matchIdField;
+    private List<Match>      loadedMatches     = new ArrayList<>();
+    private List<Team>       loadedTeams       = new ArrayList<>();
+    private List<Tournament> loadedTournaments = new ArrayList<>();
+
+    private JTextField        fldMatchId;
+    private JComboBox<String> cmbTournament;
+    private JComboBox<String> cmbTeam1;
+    private JComboBox<String> cmbTeam2;
+    private JComboBox<String> cmbWinner;
+    private JSpinner          dateChooser;
+    private JTextField        fldTeam1Score;
+    private JTextField        fldTeam2Score;
 
     private JLabel lblCount;
 
@@ -56,6 +78,27 @@ public class MatchPanel extends JPanel {
 
     public void setAdminMode(boolean isAdmin) {
         formPanel.setVisible(isAdmin);
+    }
+
+    private JSpinner makeDateSpinner() {
+        SpinnerDateModel m = new SpinnerDateModel(new Date(), null, null, Calendar.DAY_OF_MONTH);
+        JSpinner sp = new JSpinner(m);
+        JSpinner.DateEditor ed = new JSpinner.DateEditor(sp, "yyyy-MM-dd");
+        sp.setEditor(ed);
+        sp.setFont(new Font("Arial", Font.PLAIN, 12));
+        ed.getTextField().setBackground(INPUT_BG);
+        ed.getTextField().setForeground(TEXT_MAIN);
+        ed.getTextField().setFont(new Font("Arial", Font.PLAIN, 12));
+        return sp;
+    }
+
+    private String fmt(JSpinner sp) {
+        return SDF.format((Date) sp.getValue());
+    }
+
+    private void parse(JSpinner sp, String s) {
+        try { sp.setValue(SDF.parse(s)); }
+        catch (ParseException e) { sp.setValue(new Date()); }
     }
 
     private JPanel buildToolbar() {
@@ -77,7 +120,7 @@ public class MatchPanel extends JPanel {
     }
 
     private JScrollPane buildTable() {
-        String[] columns = {"ID", "Tournament ID", "Team 1 ID", "Team 2 ID", "Winner ID", "Score", "Date", "Status"};
+        String[] columns = {"ID", "Tournament", "Team 1", "Team 2", "Winner", "Score", "Date", "Status"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -106,6 +149,10 @@ public class MatchPanel extends JPanel {
         matchTable.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_DIM));
         matchTable.getTableHeader().setReorderingAllowed(false);
 
+        int[] widths = {40, 160, 150, 150, 150, 80, 100, 90};
+        for (int i = 0; i < widths.length; i++)
+            matchTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+
         matchTable.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(
                     JTable t, Object v, boolean sel, boolean foc, int r, int c) {
@@ -120,15 +167,47 @@ public class MatchPanel extends JPanel {
             }
         });
 
+        matchTable.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(
+                    JTable t, Object v, boolean sel, boolean foc, int r, int c) {
+                super.getTableCellRendererComponent(t, v, sel, foc, r, c);
+                setBackground(sel ? ROW_SELECT : (r % 2 == 0 ? ROW_EVEN : ROW_ODD));
+                String val = v != null ? v.toString() : "";
+                if (val.equals("—")) { setForeground(TEXT_DIM); }
+                else { setForeground(GREEN); setFont(getFont().deriveFont(Font.BOLD)); }
+                return this;
+            }
+        });
+
         matchTable.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
             int selectedRow = matchTable.getSelectedRow();
-            if (selectedRow != -1) {
-                matchIdField.setText(tableModel.getValueAt(selectedRow, 0).toString());
-                tournamentIdField.setText(tableModel.getValueAt(selectedRow, 1).toString());
-                team1IdField.setText(tableModel.getValueAt(selectedRow, 2).toString());
-                team2IdField.setText(tableModel.getValueAt(selectedRow, 3).toString());
-                winnerIdField.setText(tableModel.getValueAt(selectedRow, 4).toString());
-                matchDateField.setText(tableModel.getValueAt(selectedRow, 6).toString());
+            if (selectedRow < 0) return;
+
+            int matchId = Integer.parseInt(tableModel.getValueAt(selectedRow, 0).toString());
+            Match selected = loadedMatches.stream()
+                    .filter(m -> m.getId() == matchId)
+                    .findFirst().orElse(null);
+
+            if (selected != null) {
+                fldMatchId.setText(String.valueOf(selected.getId()));
+                selectTournamentInCombo(selected.getTournamentId());
+                parse(dateChooser, selected.getMatchDate());
+                selectTeamInCombo(cmbTeam1, selected.getTeam1Id());
+                selectTeamInCombo(cmbTeam2, selected.getTeam2Id());
+                updateWinnerCombo();
+                if (selected.getWinnerId() == 0) {
+                    cmbWinner.setSelectedIndex(0);
+                } else {
+                    selectTeamInCombo(cmbWinner, selected.getWinnerId());
+                }
+                if (selected.getWinnerId() != 0) {
+                    fldTeam1Score.setText(String.valueOf(selected.getTeam1Score()));
+                    fldTeam2Score.setText(String.valueOf(selected.getTeam2Score()));
+                } else {
+                    fldTeam1Score.setText("");
+                    fldTeam2Score.setText("");
+                }
             }
         });
 
@@ -153,23 +232,44 @@ public class MatchPanel extends JPanel {
 
         g.gridy = 0;
         g.gridx = 0; g.weightx = 0.08; inputPanel.add(fLbl("Match ID"), g);
-        g.gridx = 1; g.weightx = 0.15; matchIdField = lightField(); inputPanel.add(matchIdField, g);
-        g.gridx = 2; g.weightx = 0.08; inputPanel.add(fLbl("Tournament ID"), g);
-        g.gridx = 3; g.weightx = 0.15; tournamentIdField = lightField(); inputPanel.add(tournamentIdField, g);
-        g.gridx = 4; g.weightx = 0.08; inputPanel.add(fLbl("Team 1 ID"), g);
-        g.gridx = 5; g.weightx = 0.15; team1IdField = lightField(); inputPanel.add(team1IdField, g);
-        g.gridx = 6; g.weightx = 0.08; inputPanel.add(fLbl("Team 2 ID"), g);
-        g.gridx = 7; g.weightx = 0.15; team2IdField = lightField(); inputPanel.add(team2IdField, g);
+        g.gridx = 1; g.weightx = 0.12;
+        fldMatchId = lightField();
+        fldMatchId.setEditable(false);
+        fldMatchId.setBackground(new Color(240, 238, 250));
+        inputPanel.add(fldMatchId, g);
+        g.gridx = 2; g.weightx = 0.08; inputPanel.add(fLbl("Tournament *"), g);
+        g.gridx = 3; g.weightx = 0.25;
+        cmbTournament = new JComboBox<>();
+        styleCombo(cmbTournament);
+        cmbTournament.addActionListener(e -> onTournamentSelected());
+        inputPanel.add(cmbTournament, g);
+        g.gridx = 4; g.weightx = 0.08; inputPanel.add(fLbl("Match Date *"), g);
+        g.gridx = 5; g.weightx = 0.15;
+        dateChooser = makeDateSpinner();
+        inputPanel.add(dateChooser, g);
 
         g.gridy = 1;
-        g.gridx = 0; g.weightx = 0.08; inputPanel.add(fLbl("Match Date"), g);
-        g.gridx = 1; g.weightx = 0.15; matchDateField = lightField(); inputPanel.add(matchDateField, g);
-        g.gridx = 2; g.weightx = 0.08; inputPanel.add(fLbl("Winner ID"), g);
-        g.gridx = 3; g.weightx = 0.15; winnerIdField = lightField(); inputPanel.add(winnerIdField, g);
-        g.gridx = 4; g.weightx = 0.08; inputPanel.add(fLbl("Team 1 Score"), g);
-        g.gridx = 5; g.weightx = 0.15; team1ScoreField = lightField(); inputPanel.add(team1ScoreField, g);
-        g.gridx = 6; g.weightx = 0.08; inputPanel.add(fLbl("Team 2 Score"), g);
-        g.gridx = 7; g.weightx = 0.15; team2ScoreField = lightField(); inputPanel.add(team2ScoreField, g);
+        g.gridx = 0; g.weightx = 0.08; inputPanel.add(fLbl("Team 1 *"), g);
+        g.gridx = 1; g.weightx = 0.12;
+        cmbTeam1 = teamCombo();
+        cmbTeam1.addActionListener(e -> updateWinnerCombo());
+        inputPanel.add(cmbTeam1, g);
+        g.gridx = 2; g.weightx = 0.08; inputPanel.add(fLbl("Team 2 *"), g);
+        g.gridx = 3; g.weightx = 0.25;
+        cmbTeam2 = teamCombo();
+        cmbTeam2.addActionListener(e -> updateWinnerCombo());
+        inputPanel.add(cmbTeam2, g);
+        g.gridx = 4; g.weightx = 0.08; inputPanel.add(fLbl("Winner"), g);
+        g.gridx = 5; g.weightx = 0.15;
+        cmbWinner = new JComboBox<>(new String[]{"— No winner yet —"});
+        styleCombo(cmbWinner);
+        inputPanel.add(cmbWinner, g);
+
+        g.gridy = 2;
+        g.gridx = 0; g.weightx = 0.08; inputPanel.add(fLbl("Team 1 Score"), g);
+        g.gridx = 1; g.weightx = 0.12; fldTeam1Score = lightField(); inputPanel.add(fldTeam1Score, g);
+        g.gridx = 2; g.weightx = 0.08; inputPanel.add(fLbl("Team 2 Score"), g);
+        g.gridx = 3; g.weightx = 0.25; fldTeam2Score = lightField(); inputPanel.add(fldTeam2Score, g);
 
         wrap.add(inputPanel, BorderLayout.CENTER);
 
@@ -202,60 +302,117 @@ public class MatchPanel extends JPanel {
         return wrap;
     }
 
-    private void addMatch() {
-        try {
-            int tournamentId = Integer.parseInt(tournamentIdField.getText().trim());
-            int team1Id      = Integer.parseInt(team1IdField.getText().trim());
-            int team2Id      = Integer.parseInt(team2IdField.getText().trim());
-            String matchDate = matchDateField.getText().trim();
-            Match match = new Match(0, tournamentId, team1Id, team2Id, 0, 0, 0, matchDate, "SCHEDULED");
-            if (matchService.createMatch(match)) {
-                JOptionPane.showMessageDialog(this, "Match added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                clearFields(); loadMatches();
-            } else { JOptionPane.showMessageDialog(this, "Failed to add match!", "Error", JOptionPane.ERROR_MESSAGE); }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please fill all fields correctly!", "Error", JOptionPane.ERROR_MESSAGE);
+    private void onTournamentSelected() {
+        int tournId = getSelectedTournamentId();
+        cmbTeam1.removeAllItems();
+        cmbTeam2.removeAllItems();
+        cmbTeam1.addItem("— Select Team 1 —");
+        cmbTeam2.addItem("— Select Team 2 —");
+
+        if (tournId < 0) {
+            for (Team t : loadedTeams) {
+                String item = t.getName() + " [id=" + t.getId() + "]";
+                cmbTeam1.addItem(item);
+                cmbTeam2.addItem(item);
+            }
+        } else {
+            List<com.esportsclub.model.TournamentTeam> regTeams =
+                    tournamentService.getTeamsInTournament(tournId);
+
+            if (regTeams.isEmpty()) {
+                for (Team t : loadedTeams) {
+                    String item = t.getName() + " [id=" + t.getId() + "]";
+                    cmbTeam1.addItem(item);
+                    cmbTeam2.addItem(item);
+                }
+            } else {
+                for (com.esportsclub.model.TournamentTeam tt : regTeams) {
+                    String teamName = getTeamName(tt.getTeamId());
+                    String item = teamName + " [id=" + tt.getTeamId() + "]";
+                    cmbTeam1.addItem(item);
+                    cmbTeam2.addItem(item);
+                }
+            }
         }
+        updateWinnerCombo();
+    }
+
+    private void addMatch() {
+        int tournId = getSelectedTournamentId();
+        if (tournId < 0) { warn("Please select a tournament."); return; }
+        int team1Id = getSelectedTeamId(cmbTeam1);
+        int team2Id = getSelectedTeamId(cmbTeam2);
+        if (team1Id < 0 || team2Id < 0) { warn("Please select both teams."); return; }
+        if (team1Id == team2Id)          { warn("Team 1 and Team 2 cannot be the same."); return; }
+
+        String matchDate = fmt(dateChooser);
+        Match match = new Match(0, tournId, team1Id, team2Id, 0, 0, 0, matchDate, "SCHEDULED");
+        if (matchService.createMatch(match)) {
+            info("Match added successfully.");
+            clearFields(); loadMatches();
+        } else { error("Failed to add match!"); }
     }
 
     private void enterResult() {
+        if (fldMatchId.getText().trim().isEmpty()) { warn("Select a match first."); return; }
         try {
-            int matchId    = Integer.parseInt(matchIdField.getText().trim());
-            int winnerId   = Integer.parseInt(winnerIdField.getText().trim());
-            int team1Score = Integer.parseInt(team1ScoreField.getText().trim());
-            int team2Score = Integer.parseInt(team2ScoreField.getText().trim());
+            int matchId    = Integer.parseInt(fldMatchId.getText().trim());
+            int winnerId   = getSelectedTeamId(cmbWinner);
+            int team1Score = Integer.parseInt(fldTeam1Score.getText().trim());
+            int team2Score = Integer.parseInt(fldTeam2Score.getText().trim());
+            if (winnerId < 0) { warn("Please select a winner."); return; }
             if (matchService.enterResult(matchId, winnerId, team1Score, team2Score)) {
-                JOptionPane.showMessageDialog(this, "Result entered successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                info("Result entered successfully.");
                 clearFields(); loadMatches();
-            } else { JOptionPane.showMessageDialog(this, "Failed to enter result!", "Error", JOptionPane.ERROR_MESSAGE); }
+            } else { error("Failed to enter result!"); }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please fill all fields correctly!", "Error", JOptionPane.ERROR_MESSAGE);
+            error("Please fill all fields correctly!");
         }
     }
 
     private void deleteMatch() {
+        if (fldMatchId.getText().trim().isEmpty()) { warn("Select a match first."); return; }
         try {
-            int matchId = Integer.parseInt(matchIdField.getText().trim());
+            int matchId = Integer.parseInt(fldMatchId.getText().trim());
             boolean confirmed = ConfirmDialog.showDeleteConfirm(this,
                     "Delete Match",
                     "Are you sure you want to delete this match?<br>This action cannot be undone.");
             if (confirmed) {
                 matchService.deleteMatch(matchId);
-                JOptionPane.showMessageDialog(this, "Match deleted.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                info("Match deleted.");
                 clearFields(); loadMatches();
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid Match ID!", "Error", JOptionPane.ERROR_MESSAGE);
+            error("Please enter a valid Match ID!");
         }
     }
 
     private void loadMatches() {
         tableModel.setRowCount(0);
-        List<Match> matches = matchService.getAllMatches();
-        for (Match m : matches) {
+        loadedMatches     = matchService.getAllMatches();
+        loadedTeams       = teamService.getAllTeams();
+        loadedTournaments = tournamentService.getAllTournaments();
+
+        Object curTourn = cmbTournament.getSelectedItem();
+        cmbTournament.removeAllItems();
+        cmbTournament.addItem("— Select Tournament —");
+        for (Tournament t : loadedTournaments) {
+            cmbTournament.addItem(t.getName() + " [id=" + t.getId() + "]");
+        }
+        if (curTourn != null) cmbTournament.setSelectedItem(curTourn);
+
+        refreshAllTeamCombos();
+
+        for (Match m : loadedMatches) {
+            String tournName  = getTournamentName(m.getTournamentId());
+            String team1Name  = getTeamName(m.getTeam1Id());
+            String team2Name  = getTeamName(m.getTeam2Id());
+            String winnerName = m.getWinnerId() == 0 ? "—" : getTeamName(m.getWinnerId());
+
             tableModel.addRow(new Object[]{
-                    m.getId(), m.getTournamentId(), m.getTeam1Id(), m.getTeam2Id(),
-                    m.getWinnerId(), m.getTeam1Score() + " - " + m.getTeam2Score(),
+                    m.getId(), tournName,
+                    team1Name, team2Name, winnerName,
+                    m.getTeam1Score() + " - " + m.getTeam2Score(),
                     m.getMatchDate(), m.getStatus()
             });
         }
@@ -263,12 +420,99 @@ public class MatchPanel extends JPanel {
             lblCount.setText("  Showing " + tableModel.getRowCount() + " matches   ");
     }
 
+    private void refreshAllTeamCombos() {
+        cmbTeam1.removeAllItems();
+        cmbTeam2.removeAllItems();
+        cmbTeam1.addItem("— Select Team 1 —");
+        cmbTeam2.addItem("— Select Team 2 —");
+        for (Team t : loadedTeams) {
+            String item = t.getName() + " [id=" + t.getId() + "]";
+            cmbTeam1.addItem(item);
+            cmbTeam2.addItem(item);
+        }
+        updateWinnerCombo();
+    }
+
+    private void updateWinnerCombo() {
+        String sel1 = cmbTeam1.getSelectedItem() != null ? cmbTeam1.getSelectedItem().toString() : "";
+        String sel2 = cmbTeam2.getSelectedItem() != null ? cmbTeam2.getSelectedItem().toString() : "";
+        cmbWinner.removeAllItems();
+        cmbWinner.addItem("— No winner yet —");
+        if (!sel1.startsWith("—")) cmbWinner.addItem(sel1);
+        if (!sel2.startsWith("—")) cmbWinner.addItem(sel2);
+    }
+
+    private void selectTournamentInCombo(int tournId) {
+        for (int i = 0; i < cmbTournament.getItemCount(); i++) {
+            if (cmbTournament.getItemAt(i).contains("[id=" + tournId + "]")) {
+                cmbTournament.setSelectedIndex(i); return;
+            }
+        }
+    }
+
+    private void selectTeamInCombo(JComboBox<String> combo, int teamId) {
+        for (int i = 0; i < combo.getItemCount(); i++) {
+            if (combo.getItemAt(i).contains("[id=" + teamId + "]")) {
+                combo.setSelectedIndex(i); return;
+            }
+        }
+    }
+
+    private int getSelectedTournamentId() {
+        Object selected = cmbTournament.getSelectedItem();
+        if (selected == null) return -1;
+        String s = selected.toString();
+        if (s.startsWith("—")) return -1;
+        try { return Integer.parseInt(s.replaceAll(".*\\[id=(\\d+)\\].*", "$1")); }
+        catch (Exception e) { return -1; }
+    }
+
+    private int getSelectedTeamId(JComboBox<String> combo) {
+        Object selected = combo.getSelectedItem();
+        if (selected == null) return -1;
+        String s = selected.toString();
+        if (s.startsWith("—")) return -1;
+        try { return Integer.parseInt(s.replaceAll(".*\\[id=(\\d+)\\].*", "$1")); }
+        catch (Exception e) { return -1; }
+    }
+
+    private String getTeamName(int teamId) {
+        return loadedTeams.stream()
+                .filter(t -> t.getId() == teamId)
+                .map(Team::getName)
+                .findFirst()
+                .orElse("Team " + teamId);
+    }
+
+    private String getTournamentName(int tournId) {
+        return loadedTournaments.stream()
+                .filter(t -> t.getId() == tournId)
+                .map(Tournament::getName)
+                .findFirst()
+                .orElse("Tournament " + tournId);
+    }
+
     private void clearFields() {
-        matchIdField.setText(""); tournamentIdField.setText("");
-        team1IdField.setText(""); team2IdField.setText("");
-        matchDateField.setText(""); winnerIdField.setText("");
-        team1ScoreField.setText(""); team2ScoreField.setText("");
+        fldMatchId.setText("");
+        dateChooser.setValue(new Date());
+        fldTeam1Score.setText("");
+        fldTeam2Score.setText("");
+        if (cmbTournament.getItemCount() > 0) cmbTournament.setSelectedIndex(0);
+        if (cmbTeam1.getItemCount() > 0) cmbTeam1.setSelectedIndex(0);
+        if (cmbTeam2.getItemCount() > 0) cmbTeam2.setSelectedIndex(0);
+        if (cmbWinner.getItemCount() > 0) cmbWinner.setSelectedIndex(0);
         matchTable.clearSelection();
+    }
+
+    private JComboBox<String> teamCombo() {
+        JComboBox<String> c = new JComboBox<>();
+        styleCombo(c); return c;
+    }
+
+    private void styleCombo(JComboBox<String> c) {
+        c.setFont(new Font("Arial", Font.PLAIN, 12));
+        c.setBackground(INPUT_BG);
+        c.setForeground(TEXT_MAIN);
     }
 
     private JTextField lightField() {
@@ -305,4 +549,8 @@ public class MatchPanel extends JPanel {
         });
         return b;
     }
+
+    private void info(String m)  { JOptionPane.showMessageDialog(this, m, "Success", JOptionPane.INFORMATION_MESSAGE); }
+    private void warn(String m)  { JOptionPane.showMessageDialog(this, m, "Warning", JOptionPane.WARNING_MESSAGE); }
+    private void error(String m) { JOptionPane.showMessageDialog(this, m, "Error",   JOptionPane.ERROR_MESSAGE); }
 }

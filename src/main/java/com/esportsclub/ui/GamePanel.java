@@ -296,13 +296,11 @@ public class GamePanel extends JPanel {
         fldName.setText(model.getValueAt(mr, 1).toString());
         String genre = model.getValueAt(mr, 2).toString();
         String mode  = model.getValueAt(mr, 3).toString();
-        // Genre combobox'ta yoksa ekle
         boolean foundGenre = false;
         for (int i = 0; i < cmbGenreForm.getItemCount(); i++) {
             if (cmbGenreForm.getItemAt(i).equals(genre)) { cmbGenreForm.setSelectedIndex(i); foundGenre = true; break; }
         }
         if (!foundGenre) { cmbGenreForm.addItem(genre); cmbGenreForm.setSelectedItem(genre); }
-        // Mode combobox'ta yoksa ekle
         boolean foundMode = false;
         for (int i = 0; i < cmbModeForm.getItemCount(); i++) {
             if (cmbModeForm.getItemAt(i).equals(mode)) { cmbModeForm.setSelectedIndex(i); foundMode = true; break; }

@@ -30,7 +30,6 @@ public class ReportManager {
         this.matchDAO = new MatchDAO();
     }
 
-    // En çok oyuncusu olan takımı getir
     public Team getMostPopularTeam() {
         String sql = "SELECT team_id, COUNT(*) as member_count " +
                 "FROM team_members GROUP BY team_id " +
@@ -48,7 +47,6 @@ public class ReportManager {
         return null;
     }
 
-    // En çok kazanan takımı getir
     public Team getMostWinningTeam() {
         String sql = "SELECT winner_id, COUNT(*) as win_count " +
                 "FROM matches WHERE winner_id != 0 " +
@@ -66,7 +64,6 @@ public class ReportManager {
         return null;
     }
 
-    // Tüm aktif kullanıcıları getir
     public List<User> getActiveUsers() {
         String sql = "SELECT * FROM users WHERE status='ACTIVE'";
         List<User> users = new ArrayList<>();
@@ -89,7 +86,6 @@ public class ReportManager {
         return users;
     }
 
-    // Toplam maç sayısını getir
     public int getTotalMatchCount() {
         String sql = "SELECT COUNT(*) as total FROM matches";
         try {
@@ -104,12 +100,10 @@ public class ReportManager {
         return 0;
     }
 
-    // Bitmiş turnuvaları getir
     public List<Tournament> getFinishedTournaments() {
         return tournamentDAO.getByStatus("FINISHED");
     }
 
-    // Bir takımın tüm maçlarını getir
     public List<Match> getMatchesByTeam(int teamId) {
         List<Match> matches = new ArrayList<>();
         String sql = "SELECT * FROM matches WHERE team1_id=? OR team2_id=?";

@@ -8,10 +8,8 @@ public class Team {
     private int maxCapacity; // maksimum oyuncu sayısı
     private String status;   // "ACTIVE" veya "INACTIVE"
 
-    // Constructor - boş
     public Team() {}
 
-    // Constructor - parametreli
     public Team(int id, String name, int gameId, int maxCapacity, String status) {
         this.id = id;
         this.name = name;

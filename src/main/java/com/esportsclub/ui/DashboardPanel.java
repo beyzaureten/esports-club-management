@@ -1,5 +1,6 @@
 package com.esportsclub.ui;
 
+import com.esportsclub.dao.MatchDAO;
 import com.esportsclub.model.Match;
 import com.esportsclub.model.Team;
 import com.esportsclub.model.Tournament;
@@ -24,7 +25,6 @@ public class DashboardPanel extends JPanel {
     private static final Color BLUE       = new Color(59, 130, 246);
     private static final Color YELLOW     = new Color(245, 158, 11);
     private static final Color PINK       = new Color(236, 72, 153);
-    private static final Color ORANGE     = new Color(249, 115, 22);
     private static final Color TEXT_MAIN  = new Color(30, 27, 46);
     private static final Color TEXT_DIM   = new Color(120, 110, 150);
     private static final Color BORDER_DIM = new Color(220, 215, 240);
@@ -35,14 +35,11 @@ public class DashboardPanel extends JPanel {
 
     private final MainFrame mainFrame;
 
-    // Stat kartları
     private JLabel lblTeamCount, lblUserCount, lblTournCount, lblMatchCount;
-
-    // Son maçlar tablosu
     private JPanel recentMatchesPanel;
-
-    // Hoş geldin etiketi
     private JLabel lblWelcome;
+
+    private List<Team> loadedTeams;
 
     public DashboardPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -52,9 +49,6 @@ public class DashboardPanel extends JPanel {
         add(buildContent(), BorderLayout.CENTER);
     }
 
-    // =========================================================================
-    // Header
-    // =========================================================================
     private JPanel buildHeader() {
         JPanel bar = new JPanel(new BorderLayout(10, 0));
         bar.setBackground(BG_PANEL);
@@ -73,16 +67,12 @@ public class DashboardPanel extends JPanel {
         return bar;
     }
 
-    // =========================================================================
-    // Ana içerik
-    // =========================================================================
     private JPanel buildContent() {
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(BG_MAIN);
         content.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Stat kartları
         JPanel statsRow = new JPanel(new GridLayout(1, 4, 14, 0));
         statsRow.setBackground(BG_MAIN);
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
@@ -92,28 +82,22 @@ public class DashboardPanel extends JPanel {
         lblTournCount = new JLabel("—", SwingConstants.CENTER);
         lblMatchCount = new JLabel("—", SwingConstants.CENTER);
 
-        statsRow.add(statCard("Total Teams",       lblTeamCount,  ACCENT,  TEAM_PANEL()));
-        statsRow.add(statCard("Active Users",       lblUserCount,  GREEN,   null));
-        statsRow.add(statCard("Tournaments",        lblTournCount, YELLOW,  TOURN_PANEL()));
-        statsRow.add(statCard("Total Matches",      lblMatchCount, PINK,    MATCH_PANEL()));
+        statsRow.add(statCard("Total Teams",   lblTeamCount,  ACCENT, TEAM_PANEL()));
+        statsRow.add(statCard("Active Users",  lblUserCount,  GREEN,  null));
+        statsRow.add(statCard("Tournaments",   lblTournCount, YELLOW, TOURN_PANEL()));
+        statsRow.add(statCard("Total Matches", lblMatchCount, PINK,   MATCH_PANEL()));
 
         content.add(statsRow);
         content.add(Box.createVerticalStrut(20));
 
-        // Alt kısım: son maçlar + hızlı erişim
         JPanel bottomRow = new JPanel(new GridLayout(1, 2, 14, 0));
         bottomRow.setBackground(BG_MAIN);
-
         bottomRow.add(buildRecentMatches());
-        bottomRow.add(buildQuickAccess());
-
+        bottomRow.add(buildUpcomingTournaments());
         content.add(bottomRow);
         return content;
     }
 
-    // =========================================================================
-    // Stat kartı
-    // =========================================================================
     private JPanel statCard(String label, JLabel valueLabel, Color accent, String panel) {
         JPanel card = new JPanel(new BorderLayout(0, 8));
         card.setBackground(BG_PANEL);
@@ -135,29 +119,18 @@ public class DashboardPanel extends JPanel {
         if (panel != null) {
             card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             card.addMouseListener(new MouseAdapter() {
-                @Override public void mouseEntered(MouseEvent e) {
-                    card.setBackground(new Color(248, 247, 255));
-                }
-                @Override public void mouseExited(MouseEvent e) {
-                    card.setBackground(BG_PANEL);
-                }
-                @Override public void mouseClicked(MouseEvent e) {
-                    mainFrame.showPanel(panel);
-                }
+                @Override public void mouseEntered(MouseEvent e) { card.setBackground(new Color(248, 247, 255)); }
+                @Override public void mouseExited(MouseEvent e)  { card.setBackground(BG_PANEL); }
+                @Override public void mouseClicked(MouseEvent e) { mainFrame.showPanel(panel); }
             });
-
             JLabel arrow = new JLabel("→");
             arrow.setFont(new Font("Arial", Font.BOLD, 14));
             arrow.setForeground(new Color(200, 190, 230));
             card.add(arrow, BorderLayout.EAST);
         }
-
         return card;
     }
 
-    // =========================================================================
-    // Son maçlar
-    // =========================================================================
     private JPanel buildRecentMatches() {
         JPanel card = new JPanel(new BorderLayout(0, 10));
         card.setBackground(BG_PANEL);
@@ -170,6 +143,7 @@ public class DashboardPanel extends JPanel {
         JLabel title = new JLabel("Recent Matches");
         title.setFont(new Font("Arial", Font.BOLD, 14));
         title.setForeground(TEXT_MAIN);
+
         JLabel viewAll = new JLabel("View all →");
         viewAll.setFont(new Font("Arial", Font.PLAIN, 12));
         viewAll.setForeground(ACCENT);
@@ -187,14 +161,10 @@ public class DashboardPanel extends JPanel {
         recentMatchesPanel.setLayout(new BoxLayout(recentMatchesPanel, BoxLayout.Y_AXIS));
         recentMatchesPanel.setOpaque(false);
         card.add(recentMatchesPanel, BorderLayout.CENTER);
-
         return card;
     }
 
-    // =========================================================================
-    // Hızlı erişim
-    // =========================================================================
-    private JPanel buildQuickAccess() {
+    private JPanel buildUpcomingTournaments() {
         JPanel card = new JPanel(new BorderLayout(0, 10));
         card.setBackground(BG_PANEL);
         card.setBorder(BorderFactory.createCompoundBorder(
@@ -206,6 +176,7 @@ public class DashboardPanel extends JPanel {
         JLabel title = new JLabel("Upcoming Tournaments");
         title.setFont(new Font("Arial", Font.BOLD, 14));
         title.setForeground(TEXT_MAIN);
+
         JLabel viewAll = new JLabel("View all →");
         viewAll.setFont(new Font("Arial", Font.PLAIN, 12));
         viewAll.setForeground(GREEN);
@@ -257,8 +228,8 @@ public class DashboardPanel extends JPanel {
 
         JLabel status = new JLabel(t.getStatus());
         status.setFont(new Font("Arial", Font.BOLD, 11));
-        status.setForeground("UPCOMING".equals(t.getStatus())  ? BLUE :
-                "ONGOING".equals(t.getStatus())   ? GREEN : TEXT_DIM);
+        status.setForeground("UPCOMING".equals(t.getStatus()) ? BLUE :
+                "ONGOING".equals(t.getStatus())  ? GREEN : TEXT_DIM);
 
         JLabel date = new JLabel(t.getStartDate());
         date.setFont(new Font("Arial", Font.PLAIN, 11));
@@ -274,73 +245,50 @@ public class DashboardPanel extends JPanel {
         return row;
     }
 
-    private JButton quickBtn(String text, Color bg, String panel) {
-        JButton b = new JButton(text);
-        b.setFont(new Font("Arial", Font.BOLD, 13));
-        b.setForeground(Color.WHITE);
-        b.setBackground(bg);
-        b.setFocusPainted(false);
-        b.setBorderPainted(false);
-        b.setPreferredSize(new Dimension(0, 40));
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.addActionListener(e -> mainFrame.showPanel(panel));
-        b.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { b.setBackground(bg.darker()); }
-            @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
-        });
-        return b;
-    }
-
-    // =========================================================================
-    // Veri yükle
-    // =========================================================================
     public void loadData(User user) {
-        // Hoş geldin mesajı
         if (user != null) {
             lblWelcome.setText("Welcome back, " + user.getUsername() + "!");
         }
 
-        // Stat kartları
-        lblTeamCount.setText(String.valueOf(teamService.getAllTeams().size()));
+        // Takımları yükle
+        loadedTeams = teamService.getAllTeams();
+
+        lblTeamCount.setText(String.valueOf(loadedTeams.size()));
         lblUserCount.setText(String.valueOf(reportManager.getActiveUsers().size()));
         lblTournCount.setText(String.valueOf(tournamentService.getAllTournaments().size()));
         lblMatchCount.setText(String.valueOf(reportManager.getTotalMatchCount()));
 
         // Son maçlar
         recentMatchesPanel.removeAll();
-        List<Match> matches = reportManager.getMatchesByTeam(0);
+        MatchDAO matchDAO = new MatchDAO();
+        List<Match> allMatches = matchDAO.getAll();
 
-        // Tüm maçları al
-        List<Match> allMatches = new java.util.ArrayList<>();
-        try {
-            java.lang.reflect.Method m = reportManager.getClass().getDeclaredMethod("getTotalMatchCount");
-        } catch (Exception ignored) {}
+// Sadece FINISHED maçları al, sondan 5 tane
+        List<Match> finishedMatches = allMatches.stream()
+                .filter(m -> "FINISHED".equals(m.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
 
-        // MatchDAO'dan son 5 maçı al
-        com.esportsclub.dao.MatchDAO matchDAO = new com.esportsclub.dao.MatchDAO();
-        List<Match> recentMatches = matchDAO.getAll();
-        int count = Math.min(recentMatches.size(), 5);
+        int count = Math.min(finishedMatches.size(), 5);
 
         if (count == 0) {
-            JLabel empty = new JLabel("No matches yet");
+            JLabel empty = new JLabel("No finished matches yet");
             empty.setFont(new Font("Arial", Font.PLAIN, 13));
             empty.setForeground(TEXT_DIM);
             empty.setBorder(new EmptyBorder(8, 0, 0, 0));
             recentMatchesPanel.add(empty);
         } else {
-            for (int i = recentMatches.size() - 1; i >= recentMatches.size() - count; i--) {
-                recentMatchesPanel.add(matchRow(recentMatches.get(i)));
+            for (int i = finishedMatches.size() - 1; i >= finishedMatches.size() - count; i--) {
+                recentMatchesPanel.add(matchRow(finishedMatches.get(i)));
                 recentMatchesPanel.add(Box.createVerticalStrut(6));
             }
         }
+
 
         recentMatchesPanel.revalidate();
         recentMatchesPanel.repaint();
     }
 
-    public void loadData() {
-        loadData(null);
-    }
+    public void loadData() { loadData(null); }
 
     private JPanel matchRow(Match m) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
@@ -350,7 +298,9 @@ public class DashboardPanel extends JPanel {
                 new EmptyBorder(8, 12, 8, 12)));
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
-        JLabel teams = new JLabel("Team " + m.getTeam1Id() + "  vs  Team " + m.getTeam2Id());
+        String t1 = getTeamName(m.getTeam1Id());
+        String t2 = getTeamName(m.getTeam2Id());
+        JLabel teams = new JLabel(t1 + "  vs  " + t2);
         teams.setFont(new Font("Arial", Font.BOLD, 12));
         teams.setForeground(TEXT_MAIN);
 
@@ -373,12 +323,18 @@ public class DashboardPanel extends JPanel {
         return row;
     }
 
-    // Panel sabitleri
+    private String getTeamName(int teamId) {
+        if (loadedTeams == null) return "Team " + teamId;
+        return loadedTeams.stream()
+                .filter(t -> t.getId() == teamId)
+                .map(Team::getName)
+                .findFirst()
+                .orElse("Team " + teamId);
+    }
+
     private String TEAM_PANEL()  { return MainFrame.TEAM_PANEL; }
-    private String GAME_PANEL()  { return MainFrame.GAME_PANEL; }
     private String TOURN_PANEL() { return MainFrame.TOURNAMENT_PANEL; }
     private String MATCH_PANEL() { return MainFrame.MATCH_PANEL; }
-    private String REPORT_PANEL(){ return MainFrame.REPORT_PANEL; }
 
     private JButton solidBtn(String text, Color bg, int width) {
         JButton b = new JButton(text);

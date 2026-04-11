@@ -15,7 +15,6 @@ public class GameDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
-    // Yeni oyun ekle
     public void insert(Game game) {
         String sql = "INSERT INTO games (name, genre, mode) VALUES (?, ?, ?)";
         try {
@@ -24,13 +23,12 @@ public class GameDAO {
             ps.setString(2, game.getGenre());
             ps.setString(3, game.getMode());
             ps.executeUpdate();
-            System.out.println("Oyun eklendi: " + game.getName());
+            System.out.println("Game added: " + game.getName());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Oyun güncelle
     public void update(Game game) {
         String sql = "UPDATE games SET name=?, genre=?, mode=? WHERE id=?";
         try {
@@ -40,26 +38,24 @@ public class GameDAO {
             ps.setString(3, game.getMode());
             ps.setInt(4, game.getId());
             ps.executeUpdate();
-            System.out.println("Oyun güncellendi: " + game.getName());
+            System.out.println("Game updated: " + game.getName());
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // Oyun sil
     public void delete(int id) {
         String sql = "DELETE FROM games WHERE id=?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ps.executeUpdate();
-            System.out.println("Oyun silindi. ID: " + id);
+            System.out.println("Game deleted. ID: " + id);
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
     }
 
-    // ID ile oyun getir
     public Game getById(int id) {
         String sql = "SELECT * FROM games WHERE id=?";
         try {
@@ -70,12 +66,11 @@ public class GameDAO {
                 return mapResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return null;
     }
 
-    // Tüm oyunları getir
     public List<Game> getAll() {
         List<Game> games = new ArrayList<>();
         String sql = "SELECT * FROM games";
@@ -86,12 +81,11 @@ public class GameDAO {
                 games.add(mapResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Hata: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
         }
         return games;
     }
 
-    // ResultSet'i Game nesnesine çevir
     private Game mapResultSet(ResultSet rs) throws SQLException {
         return new Game(
                 rs.getInt("id"),

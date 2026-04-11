@@ -7,10 +7,8 @@ public class Game {
     private String genre; // "FPS", "MOBA", "RPG" vb.
     private String mode;  // "5v5", "1v1" vb.
 
-    // Constructor - boş
     public Game() {}
 
-    // Constructor - parametreli
     public Game(int id, String name, String genre, String mode) {
         this.id = id;
         this.name = name;

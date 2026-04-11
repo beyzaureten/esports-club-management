@@ -10,7 +10,6 @@ public class TeamBuilder {
     private int maxCapacity;
     private String status;
 
-    // Builder Pattern - build a Team object step by step
     public TeamBuilder setId(int id) {
         this.id = id;
         return this;
@@ -36,7 +35,6 @@ public class TeamBuilder {
         return this;
     }
 
-    // Final step - build and return the Team object
     public Team build() {
         if (name == null || name.trim().isEmpty()) {
             System.out.println("Error: Team name cannot be empty!");

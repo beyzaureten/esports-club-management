@@ -1,10 +1,13 @@
 package com.esportsclub.ui;
 
 import com.esportsclub.model.Game;
+import com.esportsclub.model.Team;
 import com.esportsclub.model.Tournament;
 import com.esportsclub.model.TournamentTeam;
 import com.esportsclub.service.GameService;
+import com.esportsclub.service.TeamService;
 import com.esportsclub.service.TournamentService;
+import com.toedter.calendar.JDateChooser;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -14,7 +17,9 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Locale;
 
 public class TournamentPanel extends JPanel {
 
@@ -36,8 +41,11 @@ public class TournamentPanel extends JPanel {
     private static final Color BORDER_DIM = new Color(220, 215, 240);
     private static final Color INPUT_BG   = new Color(250, 249, 255);
 
+    private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd");
+
     private final TournamentService tournamentService = new TournamentService();
     private final GameService       gameService       = new GameService();
+    private final TeamService       teamService       = new TeamService();
 
     private JTable            tournTable;
     private DefaultTableModel tournModel;
@@ -49,14 +57,17 @@ public class TournamentPanel extends JPanel {
     private DefaultTableModel teamModel;
     private JLabel            lblTeamTitle;
 
-    private JTextField        fldId, fldName, fldStartDate, fldEndDate;
+    private JTextField        fldId, fldName;
     private JComboBox<String> cmbGame;
     private JSpinner          spnMaxTeams;
     private JComboBox<String> cmbStatus;
-    private JTextField        fldTeamId;
-    private JTextField        fldRegDate;
+    private JDateChooser      dateStart;
+    private JDateChooser      dateEnd;
+    private JComboBox<String> cmbRegTeam;
+    private JDateChooser      dateReg;
+    private JLabel            lblCount;
 
-    private JLabel lblCount;
+    private List<Team> loadedTeams;
 
     public TournamentPanel() {
         setLayout(new BorderLayout(0, 0));
@@ -72,18 +83,35 @@ public class TournamentPanel extends JPanel {
         formPanel.setVisible(isAdmin);
     }
 
+    private JDateChooser makeDateChooser() {
+        JDateChooser dc = new JDateChooser();
+        dc.setDateFormatString("yyyy-MM-dd");
+        dc.setLocale(Locale.ENGLISH);
+        dc.setFont(new Font("Arial", Font.PLAIN, 12));
+        dc.setPreferredSize(new Dimension(140, 28));
+        return dc;
+    }
+
+    private String fmt(JDateChooser dc) {
+        if (dc.getDate() == null) return SDF.format(new java.util.Date());
+        return SDF.format(dc.getDate());
+    }
+
+    private void setDate(JDateChooser dc, String s) {
+        try { dc.setDate(SDF.parse(s)); }
+        catch (Exception e) { dc.setDate(new java.util.Date()); }
+    }
+
     private JPanel buildToolbar() {
         JPanel bar = new JPanel(new BorderLayout(10, 0));
         bar.setBackground(BG_PANEL);
         bar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_DIM),
                 new EmptyBorder(12, 16, 12, 16)));
-
         JLabel title = new JLabel("Tournaments");
         title.setFont(new Font("Arial", Font.BOLD, 22));
         title.setForeground(ACCENT);
         bar.add(title, BorderLayout.WEST);
-
         JButton btnRefresh = solidBtn("Refresh", BLUE, 90);
         btnRefresh.addActionListener(e -> loadAll());
         bar.add(btnRefresh, BorderLayout.EAST);
@@ -173,12 +201,10 @@ public class TournamentPanel extends JPanel {
         GridBagConstraints ec = new GridBagConstraints();
         ec.gridx = 0; ec.gridy = GridBagConstraints.RELATIVE;
         ec.insets = new Insets(6, 0, 6, 0);
-
         JLabel emptyText = new JLabel("No tournaments found");
         emptyText.setFont(new Font("Arial", Font.BOLD, 15));
         emptyText.setForeground(ACCENT);
         emptyPanel.add(emptyText, ec);
-
         JLabel emptySub = new JLabel("Create a new tournament using the form below");
         emptySub.setFont(new Font("Arial", Font.PLAIN, 12));
         emptySub.setForeground(TEXT_DIM);
@@ -202,7 +228,7 @@ public class TournamentPanel extends JPanel {
         lblTeamTitle.setBorder(new EmptyBorder(6, 8, 4, 0));
         p.add(lblTeamTitle, BorderLayout.NORTH);
 
-        String[] cols = {"ID", "Tournament ID", "Team ID", "Registration Date"};
+        String[] cols = {"ID", "Tournament ID", "Team Name", "Registration Date"};
         teamModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -245,7 +271,8 @@ public class TournamentPanel extends JPanel {
         styleField(fldId); fldId.setBackground(new Color(240, 238, 250));
         form.add(fldId, g);
         g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Name *"), g);
-        g.gridx = 3; g.weightx = 0.25; fldName = new JTextField(); styleField(fldName); form.add(fldName, g);
+        g.gridx = 3; g.weightx = 0.25;
+        fldName = new JTextField(); styleField(fldName); form.add(fldName, g);
         g.gridx = 4; g.weightx = 0.08; form.add(fLbl("Game *"), g);
         g.gridx = 5; g.weightx = 0.2;
         cmbGame = lightCombo(new String[]{}, 0); form.add(cmbGame, g);
@@ -257,18 +284,24 @@ public class TournamentPanel extends JPanel {
         spnMaxTeams.setFont(new Font("Arial", Font.PLAIN, 12));
         form.add(spnMaxTeams, g);
         g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Start Date *"), g);
-        g.gridx = 3; g.weightx = 0.25; fldStartDate = new JTextField(); styleField(fldStartDate); form.add(fldStartDate, g);
+        g.gridx = 3; g.weightx = 0.25;
+        dateStart = makeDateChooser(); form.add(dateStart, g);
         g.gridx = 4; g.weightx = 0.08; form.add(fLbl("End Date *"), g);
-        g.gridx = 5; g.weightx = 0.2; fldEndDate = new JTextField(); styleField(fldEndDate); form.add(fldEndDate, g);
+        g.gridx = 5; g.weightx = 0.2;
+        dateEnd = makeDateChooser(); form.add(dateEnd, g);
 
         g.gridy = 2;
         g.gridx = 0; g.weightx = 0.05; form.add(fLbl("Status"), g);
         g.gridx = 1; g.weightx = 0.1;
-        cmbStatus = lightCombo(new String[]{"UPCOMING", "ONGOING", "FINISHED"}, 0); form.add(cmbStatus, g);
-        g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Team ID (register)"), g);
-        g.gridx = 3; g.weightx = 0.25; fldTeamId = new JTextField(); styleField(fldTeamId); form.add(fldTeamId, g);
+        cmbStatus = lightCombo(new String[]{"UPCOMING", "ONGOING", "FINISHED"}, 0);
+        form.add(cmbStatus, g);
+        g.gridx = 2; g.weightx = 0.1; form.add(fLbl("Register Team"), g);
+        g.gridx = 3; g.weightx = 0.25;
+        cmbRegTeam = lightCombo(new String[]{}, 0);
+        form.add(cmbRegTeam, g);
         g.gridx = 4; g.weightx = 0.08; form.add(fLbl("Reg. Date"), g);
-        g.gridx = 5; g.weightx = 0.2; fldRegDate = new JTextField(); styleField(fldRegDate); form.add(fldRegDate, g);
+        g.gridx = 5; g.weightx = 0.2;
+        dateReg = makeDateChooser(); form.add(dateReg, g);
 
         wrap.add(form, BorderLayout.CENTER);
 
@@ -279,11 +312,11 @@ public class TournamentPanel extends JPanel {
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
 
-        JButton btnAdd    = solidBtn("+ Add",          GREEN,                    90);
-        JButton btnUpdate = solidBtn("Update",         BLUE,                     90);
-        JButton btnDelete = solidBtn("Delete",         RED,                      90);
-        JButton btnClear  = solidBtn("Clear",          new Color(150, 140, 180), 80);
-        JButton btnReg    = solidBtn("+ Register Team",ORANGE,                  130);
+        JButton btnAdd    = solidBtn("+ Add",           GREEN,                    90);
+        JButton btnUpdate = solidBtn("Update",          BLUE,                     90);
+        JButton btnDelete = solidBtn("Delete",          RED,                      90);
+        JButton btnClear  = solidBtn("Clear",           new Color(150, 140, 180), 80);
+        JButton btnReg    = solidBtn("+ Register Team", ORANGE,                  130);
 
         btnAdd.addActionListener(e    -> doAdd());
         btnUpdate.addActionListener(e -> doUpdate());
@@ -306,21 +339,22 @@ public class TournamentPanel extends JPanel {
     }
 
     private void doAdd() {
-        String name  = fldName.getText().trim();
-        String start = fldStartDate.getText().trim();
-        String end   = fldEndDate.getText().trim();
-        if (name.isEmpty() || start.isEmpty() || end.isEmpty()) {
-            warn("Please fill in all required fields."); return;
+        String name = fldName.getText().trim();
+        if (name.isEmpty()) { warn("Tournament name is required."); return; }
+        if (dateStart.getDate() == null) { warn("Please select a start date."); return; }
+        if (dateEnd.getDate() == null)   { warn("Please select an end date."); return; }
+        String startStr = fmt(dateStart);
+        String endStr   = fmt(dateEnd);
+        if (dateEnd.getDate().before(dateStart.getDate())) {
+            warn("End date cannot be before start date."); return;
         }
         Object gameItem = cmbGame.getSelectedItem();
         if (gameItem == null) { warn("Please select a game."); return; }
         int gameId = parseGameId(gameItem.toString());
         if (gameId < 0) { error("Selected game not found."); return; }
-
         Tournament t = new Tournament(0, name, gameId,
-                (int) spnMaxTeams.getValue(), start, end,
+                (int) spnMaxTeams.getValue(), startStr, endStr,
                 cmbStatus.getSelectedItem().toString());
-
         if (tournamentService.createTournament(t)) {
             info("Tournament \"" + name + "\" created."); clearForm(); loadAll();
         } else { error("Failed to create tournament."); }
@@ -328,18 +362,18 @@ public class TournamentPanel extends JPanel {
 
     private void doUpdate() {
         if (fldId.getText().trim().isEmpty()) { warn("Select a tournament first."); return; }
-        String name  = fldName.getText().trim();
-        String start = fldStartDate.getText().trim();
-        String end   = fldEndDate.getText().trim();
-        if (name.isEmpty() || start.isEmpty() || end.isEmpty()) {
-            warn("Please fill in all required fields."); return;
-        }
+        String name = fldName.getText().trim();
+        if (name.isEmpty()) { warn("Tournament name is required."); return; }
+        if (dateStart.getDate() == null) { warn("Please select a start date."); return; }
+        if (dateEnd.getDate() == null)   { warn("Please select an end date."); return; }
+        String startStr = fmt(dateStart);
+        String endStr   = fmt(dateEnd);
         Object gameItem = cmbGame.getSelectedItem();
         int gameId = gameItem != null ? parseGameId(gameItem.toString()) : -1;
         if (gameId < 0) { warn("Please select a game."); return; }
         try {
             Tournament t = new Tournament(Integer.parseInt(fldId.getText().trim()), name, gameId,
-                    (int) spnMaxTeams.getValue(), start, end,
+                    (int) spnMaxTeams.getValue(), startStr, endStr,
                     cmbStatus.getSelectedItem().toString());
             if (tournamentService.updateTournament(t)) { info("Tournament updated."); clearForm(); loadAll(); }
         } catch (NumberFormatException ex) { error("Invalid ID."); }
@@ -359,19 +393,21 @@ public class TournamentPanel extends JPanel {
 
     private void doRegisterTeam() {
         if (fldId.getText().trim().isEmpty()) { warn("Select a tournament first."); return; }
-        String teamIdStr = fldTeamId.getText().trim();
-        String regDate   = fldRegDate.getText().trim();
-        if (teamIdStr.isEmpty() || regDate.isEmpty()) {
-            warn("Please enter Team ID and Registration Date."); return;
+        Object selected = cmbRegTeam.getSelectedItem();
+        if (selected == null || selected.toString().startsWith("—")) {
+            warn("Please select a team to register."); return;
         }
+        if (dateReg.getDate() == null) { warn("Please select a registration date."); return; }
         try {
             int tournId = Integer.parseInt(fldId.getText().trim());
-            int teamId  = Integer.parseInt(teamIdStr);
+            int teamId  = Integer.parseInt(selected.toString().replaceAll(".*\\[id=(\\d+)\\].*", "$1"));
+            String regDate = fmt(dateReg);
             if (tournamentService.addTeamToTournament(tournId, teamId, regDate)) {
                 info("Team registered successfully.");
-                fldTeamId.setText(""); fldRegDate.setText("");
+                cmbRegTeam.setSelectedIndex(0);
+                dateReg.setDate(null);
                 loadRegisteredTeams();
-            } else { error("Failed to register team. Tournament may be full."); }
+            } else { error("Failed to register team. Tournament may be full or team already registered."); }
         } catch (NumberFormatException ex) { error("Invalid ID format."); }
     }
 
@@ -379,6 +415,7 @@ public class TournamentPanel extends JPanel {
         tournModel.setRowCount(0);
         List<Tournament> tournaments = tournamentService.getAllTournaments();
         List<Game> games = gameService.getAllGames();
+        loadedTeams = teamService.getAllTeams();
 
         for (Tournament t : tournaments) {
             String gameName = games.stream()
@@ -394,8 +431,11 @@ public class TournamentPanel extends JPanel {
         games.forEach(g -> cmbGame.addItem(g.getName() + "  [id=" + g.getId() + "]"));
         if (curGC != null) cmbGame.setSelectedItem(curGC);
 
-        lblCount.setText("  Showing " + tournModel.getRowCount() + " tournaments   ");
+        cmbRegTeam.removeAllItems();
+        cmbRegTeam.addItem("— Select Team —");
+        loadedTeams.forEach(t -> cmbRegTeam.addItem(t.getName() + " [id=" + t.getId() + "]"));
 
+        lblCount.setText("  Showing " + tournModel.getRowCount() + " tournaments   ");
         CardLayout cl = (CardLayout) tournTableWrapper.getLayout();
         cl.show(tournTableWrapper, tournModel.getRowCount() == 0 ? "empty" : "table");
     }
@@ -411,8 +451,15 @@ public class TournamentPanel extends JPanel {
             List<TournamentTeam> teams = tournamentService.getTeamsInTournament(id);
             lblTeamTitle.setText("  Registered Teams for \"" + fldName.getText().trim()
                     + "\"  (" + teams.size() + " team" + (teams.size() != 1 ? "s" : "") + ")");
-            for (TournamentTeam tt : teams)
-                teamModel.addRow(new Object[]{tt.getId(), tt.getTournamentId(), tt.getTeamId(), tt.getRegistrationDate()});
+            for (TournamentTeam tt : teams) {
+                String teamName = loadedTeams == null ? "Team " + tt.getTeamId() :
+                        loadedTeams.stream()
+                                .filter(t -> t.getId() == tt.getTeamId())
+                                .map(Team::getName)
+                                .findFirst()
+                                .orElse("Team " + tt.getTeamId());
+                teamModel.addRow(new Object[]{tt.getId(), tt.getTournamentId(), teamName, tt.getRegistrationDate()});
+            }
         } catch (NumberFormatException ignored) {}
     }
 
@@ -427,16 +474,16 @@ public class TournamentPanel extends JPanel {
             if (cmbGame.getItemAt(i).startsWith(gName)) { cmbGame.setSelectedIndex(i); break; }
         }
         spnMaxTeams.setValue(Integer.parseInt(tournModel.getValueAt(mr, 3).toString()));
-        fldStartDate.setText(tournModel.getValueAt(mr, 4).toString());
-        fldEndDate.setText(tournModel.getValueAt(mr, 5).toString());
+        setDate(dateStart, tournModel.getValueAt(mr, 4).toString());
+        setDate(dateEnd,   tournModel.getValueAt(mr, 5).toString());
         cmbStatus.setSelectedItem(tournModel.getValueAt(mr, 6).toString());
     }
 
     private void clearForm() {
         fldId.setText(""); fldName.setText("");
-        fldStartDate.setText(""); fldEndDate.setText("");
-        fldTeamId.setText(""); fldRegDate.setText("");
+        dateStart.setDate(null); dateEnd.setDate(null); dateReg.setDate(null);
         if (cmbGame.getItemCount() > 0) cmbGame.setSelectedIndex(0);
+        if (cmbRegTeam.getItemCount() > 0) cmbRegTeam.setSelectedIndex(0);
         spnMaxTeams.setValue(8); cmbStatus.setSelectedIndex(0);
         tournTable.clearSelection(); teamModel.setRowCount(0);
         lblTeamTitle.setText("  Registered Teams  —  select a tournament to view");

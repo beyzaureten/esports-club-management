@@ -5,6 +5,8 @@ import com.esportsclub.model.Team;
 import com.esportsclub.model.Tournament;
 import com.esportsclub.model.User;
 import com.esportsclub.service.ReportManager;
+import com.esportsclub.service.TeamService;
+import com.esportsclub.service.TournamentService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -34,14 +36,19 @@ public class ReportPanel extends JPanel {
     private static final Color BORDER_DIM = new Color(220, 215, 240);
     private static final Color INPUT_BG   = new Color(250, 249, 255);
 
-    private final ReportManager reportManager = new ReportManager();
+    private final ReportManager     reportManager     = new ReportManager();
+    private final TeamService       teamService       = new TeamService();
+    private final TournamentService tournamentService = new TournamentService();
 
     private JLabel cardMatchCount, cardUserCount, cardTournCount, cardPopTeam, cardWinTeam;
 
     private DefaultTableModel matchByTeamModel;
     private DefaultTableModel activeUserModel;
     private DefaultTableModel finishedTournModel;
-    private JTextField        fldTeamIdQuery;
+    private JComboBox<String> cmbTeamSearch;
+
+    private List<Team>       loadedTeams;
+    private List<Tournament> loadedTournaments;
 
     public ReportPanel() {
         setLayout(new BorderLayout(0, 0));
@@ -97,11 +104,11 @@ public class ReportPanel extends JPanel {
         cardPopTeam    = new JLabel("—", SwingConstants.CENTER);
         cardWinTeam    = new JLabel("—", SwingConstants.CENTER);
 
-        row.add(statCard("Total Matches",        cardMatchCount, ORANGE));
-        row.add(statCard("Active Users",          cardUserCount,  GREEN));
-        row.add(statCard("Finished Tournaments",  cardTournCount, YELLOW));
-        row.add(statCard("Most Popular Team",     cardPopTeam,    BLUE));
-        row.add(statCard("Most Winning Team",     cardWinTeam,    PINK));
+        row.add(statCard("Total Matches",       cardMatchCount, ORANGE));
+        row.add(statCard("Active Users",         cardUserCount,  GREEN));
+        row.add(statCard("Finished Tournaments", cardTournCount, YELLOW));
+        row.add(statCard("Most Popular Team",    cardPopTeam,    BLUE));
+        row.add(statCard("Most Winning Team",    cardWinTeam,    PINK));
         return row;
     }
 
@@ -116,8 +123,9 @@ public class ReportPanel extends JPanel {
         lbl.setFont(new Font("Arial", Font.PLAIN, 11));
         lbl.setForeground(TEXT_DIM);
 
-        valueLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 18));
         valueLabel.setForeground(accent);
+        valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         card.add(lbl,        BorderLayout.NORTH);
         card.add(valueLabel, BorderLayout.CENTER);
@@ -131,20 +139,17 @@ public class ReportPanel extends JPanel {
 
         JPanel queryRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         queryRow.setBackground(BG_PANEL);
-        queryRow.add(sLbl("Team ID:"));
-        fldTeamIdQuery = new JTextField(8);
-        fldTeamIdQuery.setFont(new Font("Arial", Font.PLAIN, 13));
-        fldTeamIdQuery.setBackground(INPUT_BG);
-        fldTeamIdQuery.setForeground(TEXT_MAIN);
-        fldTeamIdQuery.setCaretColor(ACCENT);
-        fldTeamIdQuery.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_DIM),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-        queryRow.add(fldTeamIdQuery);
+        queryRow.add(sLbl("Team:"));
+
+        cmbTeamSearch = new JComboBox<>();
+        cmbTeamSearch.setFont(new Font("Arial", Font.PLAIN, 13));
+        cmbTeamSearch.setBackground(INPUT_BG);
+        cmbTeamSearch.setForeground(TEXT_MAIN);
+        cmbTeamSearch.setPreferredSize(new Dimension(220, 30));
+        queryRow.add(cmbTeamSearch);
 
         JButton btnSearch = solidBtn("Search Matches", BLUE, 140);
         btnSearch.addActionListener(e -> loadMatchesByTeam());
-        fldTeamIdQuery.addActionListener(e -> loadMatchesByTeam());
         queryRow.add(btnSearch);
         p.add(queryRow, BorderLayout.NORTH);
 
@@ -191,7 +196,7 @@ public class ReportPanel extends JPanel {
         p.setBackground(BG_PANEL);
         p.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        String[] cols = {"ID", "Tournament Name", "Game ID", "Max Teams", "Start Date", "End Date", "Status"};
+        String[] cols = {"ID", "Tournament Name", "Game", "Max Teams", "Start Date", "End Date", "Status"};
         finishedTournModel = readOnlyModel(cols);
         JScrollPane sp = new JScrollPane(styledTable(finishedTournModel));
         sp.getViewport().setBackground(BG_TABLE);
@@ -202,6 +207,14 @@ public class ReportPanel extends JPanel {
     }
 
     private void loadAll() {
+        loadedTeams       = teamService.getAllTeams();
+        loadedTournaments = tournamentService.getAllTournaments();
+
+        cmbTeamSearch.removeAllItems();
+        cmbTeamSearch.addItem("— Select Team —");
+        for (Team t : loadedTeams)
+            cmbTeamSearch.addItem(t.getName() + " [id=" + t.getId() + "]");
+
         cardMatchCount.setText(String.valueOf(reportManager.getTotalMatchCount()));
 
         List<User> activeUsers = reportManager.getActiveUsers();
@@ -222,35 +235,77 @@ public class ReportPanel extends JPanel {
                     u.getId(), u.getUsername(), u.getEmail(), u.getRole(), u.getStatus()});
 
         finishedTournModel.setRowCount(0);
-        for (Tournament t : finished)
+        for (Tournament t : finished) {
+            String gameName = loadedTournaments.stream()
+                    .filter(lt -> lt.getId() == t.getId())
+                    .findFirst()
+                    .map(lt -> String.valueOf(lt.getGameId()))
+                    .orElse("—");
             finishedTournModel.addRow(new Object[]{
                     t.getId(), t.getName(), t.getGameId(), t.getMaxTeams(),
                     t.getStartDate(), t.getEndDate(), t.getStatus()});
+        }
     }
 
     private void loadMatchesByTeam() {
-        String idText = fldTeamIdQuery.getText().trim();
-        if (idText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Enter a Team ID.", "Warning", JOptionPane.WARNING_MESSAGE);
+        Object selected = cmbTeamSearch.getSelectedItem();
+        if (selected == null || selected.toString().startsWith("—")) {
+            JOptionPane.showMessageDialog(this, "Please select a team.", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        int teamId;
         try {
-            int teamId = Integer.parseInt(idText);
-            List<Match> matches = reportManager.getMatchesByTeam(teamId);
-            matchByTeamModel.setRowCount(0);
-            for (Match m : matches)
-                matchByTeamModel.addRow(new Object[]{
-                        m.getId(), m.getTournamentId(), m.getTeam1Id(), m.getTeam2Id(),
-                        m.getWinnerId() == 0 ? "—" : m.getWinnerId(),
-                        m.getTeam1Score() + " : " + m.getTeam2Score(),
-                        m.getMatchDate(), m.getStatus()});
-            if (matches.isEmpty())
-                JOptionPane.showMessageDialog(this,
-                        "No matches found for Team ID " + teamId + ".",
-                        "No Results", JOptionPane.INFORMATION_MESSAGE);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid Team ID.", "Error", JOptionPane.ERROR_MESSAGE);
+            teamId = Integer.parseInt(selected.toString().replaceAll(".*\\[id=(\\d+)\\].*", "$1"));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Invalid team selection.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        List<Match> matches = reportManager.getMatchesByTeam(teamId);
+        matchByTeamModel.setRowCount(0);
+
+        for (Match m : matches) {
+            String tournName  = getTournamentName(m.getTournamentId());
+            String team1Name  = getTeamName(m.getTeam1Id());
+            String team2Name  = getTeamName(m.getTeam2Id());
+            String winnerName = m.getWinnerId() == 0 ? "—" : getTeamName(m.getWinnerId());
+
+            matchByTeamModel.addRow(new Object[]{
+                    m.getId(),
+                    tournName,
+                    team1Name,
+                    team2Name,
+                    winnerName,
+                    m.getTeam1Score() + " : " + m.getTeam2Score(),
+                    m.getMatchDate(),
+                    m.getStatus()
+            });
+        }
+
+        if (matches.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No matches found for this team.",
+                    "No Results", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private String getTeamName(int teamId) {
+        if (loadedTeams == null) return "Team " + teamId;
+        return loadedTeams.stream()
+                .filter(t -> t.getId() == teamId)
+                .map(Team::getName)
+                .findFirst()
+                .orElse("Team " + teamId);
+    }
+
+    private String getTournamentName(int tournId) {
+        if (loadedTournaments == null) return "Tournament " + tournId;
+        return loadedTournaments.stream()
+                .filter(t -> t.getId() == tournId)
+                .map(Tournament::getName)
+                .findFirst()
+                .orElse("Tournament " + tournId);
     }
 
     public void resetView() { loadAll(); }

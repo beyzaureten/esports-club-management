@@ -16,6 +16,7 @@ public class LoginPanel extends JPanel {
     private static final Color ACCENT      = new Color(124, 58, 237);
     private static final Color ACCENT2     = new Color(236, 72, 153);
     private static final Color ERROR_C     = new Color(220, 38, 38);
+    private static final Color SUCCESS_C   = new Color(16, 185, 129);
     private static final Color TEXT_MAIN   = new Color(30, 27, 46);
     private static final Color TEXT_DIM    = new Color(120, 110, 150);
     private static final Color INPUT_BG    = new Color(250, 249, 255);
@@ -46,7 +47,7 @@ public class LoginPanel extends JPanel {
     private void buildUI() {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(CARD_BG);
-        card.setPreferredSize(new Dimension(460, 545));
+        card.setPreferredSize(new Dimension(460, 560));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(196, 181, 253), 1),
                 BorderFactory.createEmptyBorder(0, 0, 20, 0)));
@@ -65,7 +66,7 @@ public class LoginPanel extends JPanel {
     }
 
     private JPanel buildCardHeader() {
-        JPanel header = new JPanel(new GridLayout(3, 1, 0, 6));
+        JPanel header = new JPanel(new GridLayout(2, 1, 0, 6));
         header.setBackground(HEADER_BG);
         header.setBorder(new EmptyBorder(22, 24, 22, 24));
 
@@ -76,43 +77,49 @@ public class LoginPanel extends JPanel {
         title.setFont(new Font("Arial", Font.BOLD, 22));
         title.setForeground(new Color(220, 210, 255));
 
-        JLabel sub = new JLabel("Management System  ·  MISY1102  ·  Spring 2026", SwingConstants.CENTER);
-        sub.setFont(new Font("Arial", Font.PLAIN, 11));
-        sub.setForeground(new Color(150, 130, 190));
-
         header.add(icon);
         header.add(title);
-        header.add(sub);
         return header;
     }
 
     private JPanel buildLoginTab() {
         JPanel p = new JPanel(new GridBagLayout());
         p.setBackground(CARD_BG);
-        p.setBorder(new EmptyBorder(22, 36, 12, 36));
+        p.setBorder(new EmptyBorder(16, 36, 12, 36));
         GridBagConstraints g = gbc();
 
-        g.gridy = 0; p.add(lbl("Username"), g);
-        g.gridy = 1; fldLoginUser = textField(); p.add(fldLoginUser, g);
+        // Welcome mesajı
+        g.gridy = 0; g.insets = ins(0, 0, 16, 0);
+        JPanel welcomePanel = new JPanel(new GridLayout(2, 1, 0, 4));
+        welcomePanel.setOpaque(false);
 
-        g.gridy = 2; g.insets = ins(14, 0, 4, 0); p.add(lbl("Password"), g);
-        g.gridy = 3; g.insets = ins(0, 0, 0, 0);
+        JLabel welcomeTitle = new JLabel("Welcome to E-Sports Club!", SwingConstants.CENTER);
+        welcomeTitle.setFont(new Font("Arial", Font.BOLD, 15));
+        welcomeTitle.setForeground(ACCENT);
+
+        JLabel welcomeSub = new JLabel("Your gaming journey starts here", SwingConstants.CENTER);
+        welcomeSub.setFont(new Font("Arial", Font.ITALIC, 12));
+        welcomeSub.setForeground(TEXT_DIM);
+
+        welcomePanel.add(welcomeTitle);
+        welcomePanel.add(welcomeSub);
+        p.add(welcomePanel, g);
+
+        g.gridy = 1; g.insets = ins(0, 0, 4, 0); p.add(lbl("Username"), g);
+        g.gridy = 2; g.insets = ins(0, 0, 0, 0); fldLoginUser = textField(); p.add(fldLoginUser, g);
+
+        g.gridy = 3; g.insets = ins(14, 0, 4, 0); p.add(lbl("Password"), g);
+        g.gridy = 4; g.insets = ins(0, 0, 0, 0);
         p.add(passwordRow(fldLoginPass = pwField()), g);
 
-        g.gridy = 4; g.insets = ins(5, 0, 0, 0);
+        g.gridy = 5; g.insets = ins(5, 0, 0, 0);
         lblLoginMsg = msgLabel();
         p.add(lblLoginMsg, g);
 
-        g.gridy = 5; g.insets = ins(18, 0, 0, 0);
+        g.gridy = 6; g.insets = ins(18, 0, 0, 0);
         btnLogin = primaryBtn("LOGIN", ACCENT);
         btnLogin.addActionListener(e -> doLogin());
         p.add(btnLogin, g);
-
-        g.gridy = 6; g.insets = ins(12, 0, 0, 0);
-        JLabel hint = new JLabel("Demo: admin / admin123", SwingConstants.CENTER);
-        hint.setFont(new Font("Arial", Font.ITALIC, 11));
-        hint.setForeground(new Color(180, 170, 210));
-        p.add(hint, g);
 
         ActionListener doLogin = e -> doLogin();
         fldLoginUser.addActionListener(doLogin);
@@ -302,7 +309,7 @@ public class LoginPanel extends JPanel {
 
     private void setMsg(JLabel lbl, String msg, boolean isError) {
         lbl.setText(msg);
-        lbl.setForeground(isError ? ERROR_C : ACCENT);
+        lbl.setForeground(isError ? ERROR_C : SUCCESS_C);
     }
 
     private boolean isValidEmail(String email) {

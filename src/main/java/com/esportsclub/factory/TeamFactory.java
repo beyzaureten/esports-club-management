@@ -4,7 +4,6 @@ import com.esportsclub.model.Team;
 
 public class TeamFactory {
 
-    // Factory Pattern - creates different types of teams
     public static Team createTeam(String type, String name, int gameId) {
         switch (type.toUpperCase()) {
             case "COMPETITIVE":

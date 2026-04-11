@@ -16,7 +16,6 @@ public class ReportDAO {
         this.connection = DBConnection.getInstance().getConnection();
     }
 
-    // Get team with most members
     public Team getMostPopularTeam() {
         String sql = "SELECT t.*, COUNT(tm.id) as member_count " +
                 "FROM teams t LEFT JOIN team_members tm ON t.id = tm.team_id " +
@@ -39,7 +38,6 @@ public class ReportDAO {
         return null;
     }
 
-    // Get most played game
     public Game getMostPlayedGame() {
         String sql = "SELECT g.*, COUNT(t.id) as team_count " +
                 "FROM games g LEFT JOIN teams t ON g.id = t.game_id " +
@@ -61,7 +59,6 @@ public class ReportDAO {
         return null;
     }
 
-    // Get win counts for all teams
     public List<String> getTeamWinCounts() {
         List<String> results = new ArrayList<>();
         String sql = "SELECT t.name, COUNT(m.winner_id) as wins " +
@@ -79,7 +76,6 @@ public class ReportDAO {
         return results;
     }
 
-    // Get total number of users
     public int getTotalUserCount() {
         String sql = "SELECT COUNT(*) as total FROM users";
         try {
@@ -94,7 +90,6 @@ public class ReportDAO {
         return 0;
     }
 
-    // Get total number of tournaments
     public int getTotalTournamentCount() {
         String sql = "SELECT COUNT(*) as total FROM tournaments";
         try {
@@ -109,7 +104,6 @@ public class ReportDAO {
         return 0;
     }
 
-    // Get total number of matches
     public int getTotalMatchCount() {
         String sql = "SELECT COUNT(*) as total FROM matches";
         try {

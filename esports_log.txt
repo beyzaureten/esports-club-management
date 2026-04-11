@@ -1,0 +1,46 @@
+[2026-03-30 14:49:17] [WARNING] Enter result failed: Scores cannot be negative
+[2026-03-30 14:49:17] [WARNING] Match creation failed: Match date is empty
+[2026-03-30 14:49:17] [INFO] Match created between team 1 and team 2
+[2026-03-30 14:49:17] [WARNING] Enter result failed: Winner ID 99 is not part of match 1
+[2026-03-30 14:49:17] [WARNING] Match creation failed: Invalid tournament ID - 0
+[2026-03-30 14:49:17] [WARNING] Match creation failed: A team cannot play against itself
+[2026-03-30 14:49:17] [WARNING] Match not found. ID: 99999
+[2026-03-30 14:49:24] [WARNING] Tournament creation failed: Invalid max teams - 0
+[2026-03-30 14:49:24] [WARNING] Tournament update failed: Name is empty
+[2026-03-30 14:49:24] [WARNING] Tournament creation failed: Name is empty
+[2026-03-30 14:49:24] [INFO] Tournament created: Spring Cup
+[2026-03-30 14:49:24] [WARNING] Tournament creation failed: Dates are null
+[2026-03-30 14:49:30] [WARNING] Login failed: Username or password is null
+[2026-03-30 14:49:30] [WARNING] Registration failed: Password too short for user - testuser
+[2026-03-30 14:49:30] [WARNING] Registration failed: Username is empty
+[2026-03-30 14:49:30] [WARNING] Registration failed: Invalid email for user - testuser
+[2026-03-30 15:07:02] [WARNING] Enter result failed: Scores cannot be negative
+[2026-03-30 15:07:02] [WARNING] Match creation failed: Match date is empty
+[2026-03-30 15:07:02] [INFO] Match created between team 1 and team 2
+[2026-03-30 15:07:02] [WARNING] Enter result failed: Winner ID 99 is not part of match 1
+[2026-03-30 15:07:02] [WARNING] Match creation failed: Invalid tournament ID - 0
+[2026-03-30 15:07:02] [WARNING] Match creation failed: A team cannot play against itself
+[2026-03-30 15:07:02] [WARNING] Match not found. ID: 99999
+[2026-03-30 15:45:16] [WARNING] Enter result failed: Scores cannot be negative
+[2026-03-30 15:45:17] [WARNING] Match creation failed: Match date is empty
+[2026-03-30 15:45:17] [INFO] Match created between team 1 and team 2
+[2026-03-30 15:45:17] [WARNING] Enter result failed: Winner ID 99 is not part of match 1
+[2026-03-30 15:45:17] [WARNING] Match creation failed: Invalid tournament ID - 0
+[2026-03-30 15:45:17] [WARNING] Match creation failed: A team cannot play against itself
+[2026-03-30 15:45:17] [WARNING] Match not found. ID: 99999
+[2026-04-07 18:19:56] [WARNING] Enter result failed: Match not found. ID: 1
+[2026-04-07 18:19:56] [WARNING] Match creation failed: Match date is empty
+[2026-04-07 18:19:56] [INFO] Match created between team 1 and team 2
+[2026-04-07 18:19:56] [WARNING] Enter result failed: Match not found. ID: 1
+[2026-04-07 18:19:56] [WARNING] Match creation failed: Invalid tournament ID - 0
+[2026-04-07 18:19:56] [WARNING] Match creation failed: A team cannot play against itself
+[2026-04-07 18:19:56] [WARNING] Match not found. ID: 99999
+[2026-04-07 18:20:08] [WARNING] Tournament creation failed: Invalid max teams - 0
+[2026-04-07 18:20:08] [WARNING] Tournament update failed: Name is empty
+[2026-04-07 18:20:08] [WARNING] Tournament creation failed: Name is empty
+[2026-04-07 18:20:08] [INFO] Tournament created: Spring Cup
+[2026-04-07 18:20:08] [WARNING] Tournament creation failed: Dates are null
+[2026-04-07 18:20:14] [WARNING] Login failed: Username or password is null
+[2026-04-07 18:20:14] [WARNING] Registration failed: Password too short for user - testuser
+[2026-04-07 18:20:14] [WARNING] Registration failed: Username is empty
+[2026-04-07 18:20:14] [WARNING] Registration failed: Invalid email for user - testuser

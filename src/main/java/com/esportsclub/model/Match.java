@@ -12,10 +12,8 @@ public class Match {
     private String matchDate;
     private String status;     // "SCHEDULED", "ONGOING", "FINISHED"
 
-    // Constructor - boş
     public Match() {}
 
-    // Constructor - parametreli
     public Match(int id, int tournamentId, int team1Id, int team2Id, int winnerId,
                  int team1Score, int team2Score, String matchDate, String status) {
         this.id = id;

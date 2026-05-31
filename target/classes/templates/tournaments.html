@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Tournaments - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+    <style>
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:#1E1E26; border:1px solid #2e2e3a; border-radius:12px; padding:24px; width:440px; max-height:90vh; overflow-y:auto; }
+        .modal-title { font-size:14px; font-weight:500; color:#ccc; margin-bottom:16px; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="top-bar-left">E-Sports Club Management System</div>
+    <div class="top-bar-right">
+        <div class="top-user">
+            <div class="top-avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+            <div>
+                <div class="top-username" th:text="${loggedUser?.username}"></div>
+                <div class="top-role" th:text="${loggedUser?.role}"></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="top-logout">🚪 Sign Out</a>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sb-logo">
+        <div class="sidebar-mini-logo">
+            <div class="sidebar-mini-mark">ESC</div>
+            <div class="sidebar-mini-text">
+                <span>ESports</span>
+                <small>Club</small>
+            </div>
+        </div>
+    </div>
+    <div class="nav-section">GENERAL</div>
+    <a class="nav-item" th:href="@{/dashboard}">📊 Dashboard</a>
+    <div class="nav-section">MANAGEMENT</div>
+    <a class="nav-item" th:href="@{/teams}">👥 Teams</a>
+    <a class="nav-item" th:href="@{/games}">🎮 Games</a>
+    <a class="nav-item active" th:href="@{/tournaments}">🏆 Tournaments</a>
+    <a class="nav-item" th:href="@{/matches}">⚔️ Matches</a>
+    <a th:if="${loggedUser?.role == 'ADMIN'}" class="nav-item" th:href="@{/users}">👤 Users</a>
+    <div class="nav-section">REQUESTS</div>
+    <a class="nav-item" th:href="@{/team-requests}">📨 Team Requests</a>
+    <div class="nav-section">ACCOUNT</div>
+    <a class="nav-item" th:href="@{/profile}">🪪 Profile</a>
+    <div class="nav-section">ANALYTICS</div>
+    <a class="nav-item" th:href="@{/reports}">📈 Reports</a>
+</div>
+
+<div class="main main-with-topbar">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Tournaments</div>
+            <div class="page-sub">View and manage all tournaments</div>
+        </div>
+        <div style="background:#1E1E26; border:1px solid #2e2e3a; border-radius:8px; padding:6px 12px; color:#ccc; font-size:12px; display:flex; align-items:center; gap:8px;">
+            <span style="color:#FF7020; font-weight:600;">⚙️ Strategy:</span>
+            <form th:action="@{/tournaments/strategy}" method="post" style="display:inline; margin:0;">
+                <select name="strategy" onchange="this.form.submit()">
+                    <option value="points" th:selected="${selectedStrategy == 'points'}">Points Based (Highest Score)</option>
+                    <option value="winrate" th:selected="${selectedStrategy == 'winrate'}">Win Rate (Highest Percentage)</option>
+                </select>
+            </form>
+            <span style="color:#888; font-size:11px;" th:text="'Active: ' + (${selectedStrategy == 'winrate'} ? 'Win Rate Scoring' : 'Points Based Scoring')"></span>
+        </div>
+    </div>
+
+    <div th:if="${observerMessage}" style="background:#0d2210; border:1px solid #1b4020; border-radius:8px; padding:10px 14px; margin-bottom:14px; color:#4caf50; font-size:13px;">
+        🔔 <span th:text="${observerMessage}"></span>
+    </div>
+    <div th:if="${error}" style="background:#2a0a0a; border:1px solid #c0392b; border-radius:8px; padding:10px 14px; margin-bottom:14px; color:#e74c3c; font-size:13px;">
+        ⚠️ <span th:text="${error}"></span>
+    </div>
+
+    <div class="page-layout">
+        <div class="panel">
+            <div class="panel-title">Tournament List</div>
+            <input type="text" class="search-bar" id="tournamentSearch" onkeyup="filterTable('tournamentTable', this.value)" placeholder="Search tournaments..." />
+
+            <table id="tournamentTable">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Game</th>
+                    <th>Max Teams</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${tournaments}">
+                    <td th:text="${t.name}"></td>
+                    <td th:text="${gameMap != null and gameMap[t.gameId] != null ? gameMap[t.gameId] : 'Game ID: ' + t.gameId}"></td>
+                    <td th:text="${t.maxTeams}"></td>
+                    <td th:text="${t.startDate}"></td>
+                    <td th:text="${t.endDate}"></td>
+                    <td>
+                        <span class="badge badge-done" th:if="${t.status == 'FINISHED'}" th:text="${t.status}"></span>
+                        <span class="badge badge-scheduled" th:if="${t.status == 'UPCOMING'}" th:text="${t.status}"></span>
+                        <span class="badge badge-ongoing" th:if="${t.status == 'ONGOING'}" th:text="${t.status}"></span>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <a th:href="@{/tournaments/bracket/{id}(id=${t.id})}" style="background:#FF7020; color:#fff; padding:4px 10px; border-radius:5px; font-size:11px; text-decoration:none;">Bracket</a>
+                        <button th:if="${loggedUser?.role == 'ADMIN'}"
+                                class="btn-secondary"
+                                style="padding:4px 8px; font-size:11px; margin-left:4px;"
+                                th:data-id="${t.id}"
+                                th:data-name="${t.name}"
+                                th:data-gameid="${t.gameId}"
+                                th:data-maxteams="${t.maxTeams}"
+                                th:data-startdate="${t.startDate}"
+                                th:data-enddate="${t.endDate}"
+                                th:data-status="${t.status}"
+                                onclick="openEditFromBtn(this)">
+                            Edit
+                        </button>
+                        <a th:if="${loggedUser?.role == 'ADMIN'}" th:href="@{/tournaments/delete/{id}(id=${t.id})}" style="background:#c0392b; color:#fff; padding:4px 10px; border-radius:5px; font-size:11px; text-decoration:none; margin-left:4px;" onclick="return confirm('Delete this tournament?')">Del</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- RANKING TABLE -->
+            <div class="panel-title" style="margin-top:30px; display:flex; align-items:center; gap:10px;">
+                🏆 Team Rankings
+                <span th:if="${selectedStrategy == 'winrate'}"
+                      style="font-size:11px; background:#1a1008; color:#FF7020; border:1px solid #3d2e10; padding:2px 8px; border-radius:10px;">
+                    sorted by Win Rate
+                </span>
+                <span th:if="${selectedStrategy == 'points'}"
+                      style="font-size:11px; background:#1a1008; color:#FF7020; border:1px solid #3d2e10; padding:2px 8px; border-radius:10px;">
+                    sorted by Points
+                </span>
+            </div>
+
+            <table>
+                <tr>
+                    <th>#</th>
+                    <th>Team</th>
+                    <th th:style="${selectedStrategy == 'points'} ? 'color:#FF7020;' : 'color:#555;'">Points</th>
+                    <th>Wins</th>
+                    <th>Matches</th>
+                    <th th:style="${selectedStrategy == 'winrate'} ? 'color:#FF7020;' : 'color:#555;'">Win Rate</th>
+                </tr>
+                <tr th:each="team, stat : ${rankedTeams}">
+                    <td th:text="${stat.index + 1}"></td>
+                    <td th:text="${team.name}"></td>
+                    <td th:text="${teamPoints[team.id] != null ? teamPoints[team.id] : 0}"
+                        th:style="${selectedStrategy == 'points'} ? 'font-weight:bold; color:#FF7020;' : 'color:#555;'"></td>
+                    <td th:text="${winCounts[team.id] != null ? winCounts[team.id] : 0}"></td>
+                    <td th:text="${matchCounts[team.id] != null ? matchCounts[team.id] : 0}"></td>
+                    <td th:text="${matchCounts[team.id] != null and matchCounts[team.id] > 0 ? #numbers.formatDecimal((winCounts[team.id] != null ? winCounts[team.id] : 0) * 100.0 / matchCounts[team.id], 1, 1) + '%' : '0%'}"
+                        th:style="${selectedStrategy == 'winrate'} ? 'font-weight:bold; color:#FF7020;' : 'color:#555;'"></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="form-panel" th:if="${loggedUser?.role == 'ADMIN'}">
+            <div class="form-title">➕ Add New Tournament</div>
+            <form th:action="@{/tournaments/save}" method="post" th:object="${tournament}">
+                <div class="form-group">
+                    <label class="form-label">Tournament Name</label>
+                    <input th:field="*{name}" placeholder="Tournament name" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Game</label>
+                        <select th:field="*{gameId}" required>
+                            <option th:each="g : ${games}" th:value="${g.id}" th:text="${g.name}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Teams</label>
+                        <input th:field="*{maxTeams}" type="number" min="2" placeholder="e.g. 8" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input th:field="*{startDate}" type="date" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        <input th:field="*{endDate}" type="date" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select th:field="*{status}">
+                        <option value="UPCOMING">Upcoming</option>
+                        <option value="ONGOING">Ongoing</option>
+                        <option value="FINISHED">Finished</option>
+                    </select>
+                </div>
+                <button class="btn-primary" type="submit">Save Tournament</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div class="modal-title">✏️ Edit Tournament</div>
+        <form action="/tournaments/update" method="post">
+            <input type="hidden" name="id" id="editId" />
+            <div class="form-group">
+                <label class="form-label">Tournament Name</label>
+                <input type="text" name="name" id="editName" required />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Game</label>
+                    <select name="gameId" id="editGameId">
+                        <option th:each="g : ${games}" th:value="${g.id}" th:text="${g.name}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Teams</label>
+                    <input type="number" name="maxTeams" id="editMaxTeams" min="2" required />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="startDate" id="editStartDate" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="endDate" id="editEndDate" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" id="editStatus">
+                    <option value="UPCOMING">Upcoming</option>
+                    <option value="ONGOING">Ongoing</option>
+                    <option value="FINISHED">Finished</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn-primary" type="submit" style="flex:1;">Update</button>
+                <button type="button" class="btn-secondary" style="flex:1;" onclick="closeEdit()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditFromBtn(btn) {
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editName').value = btn.dataset.name;
+        document.getElementById('editGameId').value = btn.dataset.gameid;
+        document.getElementById('editMaxTeams').value = btn.dataset.maxteams;
+        document.getElementById('editStartDate').value = btn.dataset.startdate;
+        document.getElementById('editEndDate').value = btn.dataset.enddate;
+        document.getElementById('editStatus').value = btn.dataset.status;
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEdit() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    function filterTable(tableId, query) {
+        const rows = document.getElementById(tableId).getElementsByTagName('tr');
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].style.display = rows[i].innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+        }
+    }
+</script>
+</body>
+</html>

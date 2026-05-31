@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Access Denied - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+</head>
+<body>
+<!-- TOP BAR — her sayfaya sidebar'dan önce ekle -->
+<div class="top-bar">
+    <div class="top-bar-left">E-Sports Club Management System</div>
+    <div class="top-bar-right">
+        <div class="top-user">
+            <div class="top-avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+            <div>
+                <div class="top-username" th:text="${loggedUser?.username}"></div>
+                <div class="top-role" th:text="${loggedUser?.role}"></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="top-logout">🚪 Sign Out</a>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sb-logo">
+        <img th:src="@{/logo.svg}" alt="ESports Club" style="width:190px; margin: 0 auto; display:block;" />    </div>    <div class="nav-section">GENERAL</div>
+    <a class="nav-item" th:href="@{/dashboard}">📊 Dashboard</a>
+    <div class="nav-section">ACCOUNT</div>
+    <a class="nav-item" th:href="@{/profile}">🪪 Profile</a>
+    <div class="nav-section">ANALYTICS</div>
+    <a class="nav-item" th:href="@{/reports}">📈 Reports</a>
+    <div class="sb-user">
+        <div class="avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+        <div><div class="av-name" th:text="${loggedUser?.username}"></div><div class="av-role" th:text="${loggedUser?.role}"></div></div>
+        <a th:href="@{/logout}" class="sb-logout-btn" title="Sign Out">🚪</a>
+    </div>
+</div>
+
+<div class="main main-with-topbar">
+    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+        <div style="text-align:center;">
+            <div style="font-size:64px;margin-bottom:16px;">🚫</div>
+            <div style="font-size:24px;font-weight:500;color:#e57373;margin-bottom:8px;">Access Denied</div>
+            <div style="font-size:13px;color:#666;margin-bottom:24px;">
+                You don't have permission to view this page.<br/>
+                Your role: <span style="color:#FF7020;" th:text="${loggedUser?.role}">MEMBER</span>
+            </div>
+            <a th:href="@{/dashboard}" class="btn btn-primary" style="width:auto;padding:10px 24px;display:inline-block;text-decoration:none;">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

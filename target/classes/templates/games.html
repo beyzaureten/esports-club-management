@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><title>Games - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+    <style>
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:#1E1E26; border:1px solid #2e2e3a; border-radius:12px; padding:24px; width:400px; }
+        .modal-title { font-size:14px; font-weight:500; color:#ccc; margin-bottom:16px; }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="top-bar-left">E-Sports Club Management System</div>
+    <div class="top-bar-right">
+        <div class="top-user">
+            <div class="top-avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+            <div>
+                <div class="top-username" th:text="${loggedUser?.username}"></div>
+                <div class="top-role" th:text="${loggedUser?.role}"></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="top-logout">🚪 Sign Out</a>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sb-logo">
+        <div class="sidebar-mini-logo">
+            <div class="sidebar-mini-mark">ESC</div>
+            <div class="sidebar-mini-text">
+                <span>ESports</span>
+                <small>Club</small>
+            </div>
+        </div>
+    </div>    <div class="nav-section">GENERAL</div>
+    <a class="nav-item" th:href="@{/dashboard}">📊 Dashboard</a>
+    <div class="nav-section">MANAGEMENT</div>
+    <a class="nav-item" th:href="@{/teams}">👥 Teams</a>
+    <a class="nav-item active" th:href="@{/games}">🎮 Games</a>
+    <a class="nav-item" th:href="@{/tournaments}">🏆 Tournaments</a>
+    <a class="nav-item" th:href="@{/matches}">⚔️ Matches</a>
+    <a th:if="${loggedUser?.role == 'ADMIN'}" class="nav-item" th:href="@{/users}">👤 Users</a>
+    <div class="nav-section">REQUESTS</div>
+    <a class="nav-item" th:href="@{/team-requests}">📨 Team Requests</a>
+    <div class="nav-section">ACCOUNT</div>
+    <a class="nav-item" th:href="@{/profile}">🪪 Profile</a>
+    <div class="nav-section">ANALYTICS</div>
+    <a class="nav-item" th:href="@{/reports}">📈 Reports</a>
+</div>
+
+<div class="main main-with-topbar">
+    <div class="page-header">
+        <div><div class="page-title">Games</div><div class="page-sub">View and manage all games</div></div>
+    </div>
+
+    <div th:if="${param.error == 'empty_fields'}" class="error-msg">
+        ⚠️ All fields are required! Please do not leave empty fields.
+    </div>
+
+    <div th:class="${loggedUser?.role == 'ADMIN'} ? 'page-layout' : 'panel'">
+        <div class="panel" th:style="${loggedUser?.role != 'ADMIN'} ? 'border:none; padding:0; margin:0;' : ''">
+            <div class="panel-title">Game List</div>
+            <input class="search-bar" onkeyup="filterTable('gameTable', this.value)" placeholder="Search games..." />
+            <table id="gameTable">
+                <tr>
+                    <th onclick="sortTable('gameTable', 0)">Name</th>
+                    <th onclick="sortTable('gameTable', 1)">Genre</th>
+                    <th onclick="sortTable('gameTable', 2)">Mode</th>
+                    <th th:if="${loggedUser?.role == 'ADMIN'}">Actions</th>
+                </tr>
+                <tr th:each="g : ${games}">
+                    <td th:text="${g.name}"></td>
+                    <td th:text="${g.genre}"></td>
+                    <td th:text="${g.mode}"></td>
+                    <td th:if="${loggedUser?.role == 'ADMIN'}" style="white-space:nowrap;">
+                        <button class="btn-secondary"
+                                style="padding:4px 8px; font-size:11px; margin-right:4px;"
+                                th:data-id="${g.id}"
+                                th:data-name="${g.name}"
+                                th:data-genre="${g.genre}"
+                                th:data-mode="${g.mode}"
+                                onclick="openEditFromBtn(this)">
+                            Edit
+                        </button>
+                        <a th:href="@{/games/delete/{id}(id=${g.id})}" onclick="return confirm('Delete this game?')">
+                            <button class="btn-danger" style="padding:4px 8px; font-size:11px;">Delete</button>
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="form-panel" th:if="${loggedUser?.role == 'ADMIN'}">
+            <div class="form-title">➕ Add New Game</div>
+            <form th:action="@{/games/save}" method="post" th:object="${newGame}">
+                <div class="form-group">
+                    <label class="form-label">Game Name</label>
+                    <input th:field="*{name}" placeholder="Game name" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Genre</label>
+                        <select th:field="*{genre}" required>
+                            <option value="">-- Select Genre --</option>
+                            <option value="FPS">FPS</option>
+                            <option value="MOBA">MOBA</option>
+                            <option value="Battle Royale">Battle Royale</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Fighting">Fighting</option>
+                            <option value="Strategy">Strategy</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mode</label>
+                        <input th:field="*{mode}" placeholder="5v5, 1v1..." required />
+                    </div>
+                </div>
+                <button class="btn-primary" type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div class="modal-title">✏️ Edit Game</div>
+        <form action="/games/update" method="post">
+            <input type="hidden" name="id" id="editId" />
+            <div class="form-group">
+                <label class="form-label">Game Name</label>
+                <input type="text" name="name" id="editName" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Genre</label>
+                <select name="genre" id="editGenre">
+                    <option value="FPS">FPS</option>
+                    <option value="MOBA">MOBA</option>
+                    <option value="Battle Royale">Battle Royale</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Fighting">Fighting</option>
+                    <option value="Strategy">Strategy</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mode</label>
+                <input type="text" name="mode" id="editMode" placeholder="5v5, 1v1..." required />
+            </div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn-primary" type="submit" style="flex:1;">Update</button>
+                <button type="button" class="btn-secondary" style="flex:1;" onclick="closeEdit()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditFromBtn(btn) {
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editName').value = btn.dataset.name;
+        document.getElementById('editGenre').value = btn.dataset.genre;
+        document.getElementById('editMode').value = btn.dataset.mode;
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEdit() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    function filterTable(tableId, query) {
+        const rows = document.getElementById(tableId).getElementsByTagName('tr');
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].style.display = rows[i].innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+        }
+    }
+
+    let sortDir = {};
+    function sortTable(tableId, col) {
+        const table = document.getElementById(tableId);
+        const rows = Array.from(table.rows).slice(1);
+        const dir = sortDir[tableId + col] = !(sortDir[tableId + col]);
+        rows.sort((a, b) => (dir ? 1 : -1) * (a.cells[col]?.innerText || '').localeCompare(b.cells[col]?.innerText || ''));
+        rows.forEach(r => table.tBodies[0].appendChild(r));
+        document.querySelectorAll(`#${tableId} th`).forEach(th => th.className = '');
+        table.rows[0].cells[col].className = dir ? 'sort-asc' : 'sort-desc';
+    }
+</script>
+</body>
+</html>

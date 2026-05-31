@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+</head>
+<body>
+<div class="login-page">
+    <div class="login-card">
+
+        <div class="login-logo-box">
+            <img th:src="@{/images/logo.png}" alt="ESports Club Logo" class="login-logo-img">
+        </div>
+
+        <p class="login-sub">Create a new account</p>
+
+        <div th:if="${error}" class="error-login" th:text="${error}"></div>
+
+        <form th:action="@{/register}" method="post">
+            <div class="input-wrap">
+                <input name="username" placeholder="Username" autocomplete="off" />
+            </div>
+
+            <div class="input-wrap">
+                <input name="email" type="email" placeholder="Email address" />
+            </div>
+
+            <div class="input-wrap">
+                <input name="password" id="regPassword" type="password" placeholder="Password (min 6 characters)" />
+                <span class="input-icon" onclick="toggleReg()">👁️</span>
+            </div>
+
+            <div class="input-wrap">
+                <input name="confirmPassword" id="regConfirm" type="password" placeholder="Confirm password" />
+                <span class="input-icon" onclick="toggleConfirm()">👁️</span>
+            </div>
+
+            <div class="auth-info-box">
+                <p>
+                    You will be registered as
+                    <span>MEMBER</span>.
+                    An admin can change your role later.
+                </p>
+            </div>
+
+            <button class="login-btn" type="submit">Create Account</button>
+        </form>
+
+        <p class="forgot" style="margin-top:14px;">
+            Already have an account?
+            <a th:href="@{/login}">Sign In</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    function toggleReg() {
+        const input = document.getElementById('regPassword');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function toggleConfirm() {
+        const input = document.getElementById('regConfirm');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+</script>
+</body>
+</html>

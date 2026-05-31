@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><title>Users - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+    <style>
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:#1E1E26; border:1px solid #2e2e3a; border-radius:12px; padding:24px; width:420px; }
+        .modal-title { font-size:14px; font-weight:500; color:#ccc; margin-bottom:16px; }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="top-bar-left">E-Sports Club Management System</div>
+    <div class="top-bar-right">
+        <div class="top-user">
+            <div class="top-avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+            <div>
+                <div class="top-username" th:text="${loggedUser?.username}"></div>
+                <div class="top-role" th:text="${loggedUser?.role}"></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="top-logout">🚪 Sign Out</a>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sb-logo">
+        <div class="sidebar-mini-logo">
+            <div class="sidebar-mini-mark">ESC</div>
+            <div class="sidebar-mini-text">
+                <span>ESports</span>
+                <small>Club</small>
+            </div>
+        </div>
+    </div>    <div class="nav-section">GENERAL</div>
+    <a class="nav-item" th:href="@{/dashboard}">📊 Dashboard</a>
+    <div class="nav-section">MANAGEMENT</div>
+    <a class="nav-item" th:href="@{/teams}">👥 Teams</a>
+    <a class="nav-item" th:href="@{/games}">🎮 Games</a>
+    <a class="nav-item" th:href="@{/tournaments}">🏆 Tournaments</a>
+    <a class="nav-item" th:href="@{/matches}">⚔️ Matches</a>
+    <a class="nav-item active" th:href="@{/users}">👤 Users</a>
+    <div class="nav-section">REQUESTS</div>
+    <a class="nav-item" th:href="@{/team-requests}">📨 Team Requests</a>
+    <div class="nav-section">ACCOUNT</div>
+    <a class="nav-item" th:href="@{/profile}">🪪 Profile</a>
+    <div class="nav-section">ANALYTICS</div>
+    <a class="nav-item" th:href="@{/reports}">📈 Reports</a>
+</div>
+
+<div class="main main-with-topbar">
+    <div class="page-header">
+        <div><div class="page-title">Users</div><div class="page-sub">View and manage system users</div></div>
+    </div>
+
+    <!-- Flash mesajları (RedirectAttributes ile gelir) -->
+    <div th:if="${error}" class="error-msg">
+        ⚠️ <span th:text="${error}"></span>
+    </div>
+    <div th:if="${success}" style="background:#0d2210; border:1px solid #4caf50; border-radius:8px; padding:10px 14px; margin-bottom:14px; color:#4caf50; font-size:13px;">
+        ✅ <span th:text="${success}"></span>
+    </div>
+
+    <!-- param.error (delete, kendi hesap) -->
+    <div th:if="${param.error == 'cannot_delete_self'}" class="error-msg">
+        🚫 You cannot delete your own account.
+    </div>
+    <div th:if="${param.error == 'cannot_change_own_role'}" class="warn-msg">
+        ⚠️ You cannot change your own role.
+    </div>
+
+    <div class="page-layout">
+        <div class="panel">
+            <div class="panel-title">User List</div>
+            <input class="search-bar" onkeyup="filterTable('userTable', this.value)" placeholder="Search users..." />
+            <table id="userTable">
+                <tr>
+                    <th onclick="sortTable('userTable', 0)">Username</th>
+                    <th onclick="sortTable('userTable', 1)">Email</th>
+                    <th onclick="sortTable('userTable', 2)">Role</th>
+                    <th onclick="sortTable('userTable', 3)">Status</th>
+                    <th>Actions</th>
+                </tr>
+                <tr th:each="u : ${users}">
+                    <td th:text="${u.username}"></td>
+                    <td th:text="${u.email}"></td>
+                    <td th:text="${u.role}"></td>
+                    <td>
+                        <span class="badge badge-active" th:if="${u.status == 'ACTIVE'}">Active</span>
+                        <span class="badge badge-done" th:if="${u.status == 'INACTIVE'}">Inactive</span>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-secondary"
+                                style="padding:4px 8px; font-size:11px; margin-right:4px;"
+                                th:data-id="${u.id}"
+                                th:data-username="${u.username}"
+                                th:data-email="${u.email}"
+                                th:data-role="${u.role}"
+                                th:data-status="${u.status}"
+                                th:data-teamname="${u.teamName}"
+                                onclick="openEditFromBtn(this)">
+                            Edit
+                        </button>
+                        <a th:href="@{/users/delete/{id}(id=${u.id})}" onclick="return confirm('Delete this user?')">
+                            <button class="btn-danger" style="padding:4px 8px; font-size:11px;">Delete</button>
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="form-panel">
+            <div class="form-title">➕ Add New User</div>
+            <form th:action="@{/users/save}" method="post" th:object="${newUser}">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input th:field="*{username}" placeholder="Username" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input th:field="*{email}" type="email" placeholder="Email" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input th:field="*{password}" type="password" placeholder="Password" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select th:field="*{role}">
+                            <option value="MEMBER">MEMBER</option>
+                            <option value="COACH">COACH</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select th:field="*{status}">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Team</label>
+                    <select th:field="*{teamName}">
+                        <option value="">-- No Team --</option>
+                        <option th:each="t : ${teams}" th:value="${t.name}" th:text="${t.name}"></option>
+                    </select>
+                </div>
+                <button class="btn-primary" type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div class="modal-title">✏️ Edit User</div>
+        <form action="/users/update" method="post">
+            <input type="hidden" name="id" id="editId" />
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" name="username" id="editUsername" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" id="editEmail" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password (leave blank to keep current)</label>
+                <input type="password" name="password" id="editPassword" placeholder="New password (optional)" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select name="role" id="editRole">
+                        <option value="MEMBER">MEMBER</option>
+                        <option value="COACH">COACH</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" id="editStatus">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Team</label>
+                <select name="teamName" id="editTeamName">
+                    <option value="">-- No Team --</option>
+                    <option th:each="t : ${teams}" th:value="${t.name}" th:text="${t.name}"></option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn-primary" type="submit" style="flex:1;">Update</button>
+                <button type="button" class="btn-secondary" style="flex:1;" onclick="closeEdit()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditFromBtn(btn) {
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editUsername').value = btn.dataset.username;
+        document.getElementById('editEmail').value = btn.dataset.email;
+        document.getElementById('editRole').value = btn.dataset.role;
+        document.getElementById('editStatus').value = btn.dataset.status;
+        document.getElementById('editTeamName').value = btn.dataset.teamname || '';
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEdit() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    function filterTable(tableId, query) {
+        const rows = document.getElementById(tableId).getElementsByTagName('tr');
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].style.display = rows[i].innerText.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+        }
+    }
+
+    let sortDir = {};
+    function sortTable(tableId, col) {
+        const table = document.getElementById(tableId);
+        const rows = Array.from(table.rows).slice(1);
+        const dir = sortDir[tableId + col] = !(sortDir[tableId + col]);
+        rows.sort((a, b) => (dir ? 1 : -1) * (a.cells[col]?.innerText || '').localeCompare(b.cells[col]?.innerText || ''));
+        rows.forEach(r => table.tBodies[0].appendChild(r));
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Team Requests - ESports Club</title>
+    <link rel="stylesheet" th:href="@{/style.css}" />
+    <style>
+        .req-card { background: #1E1E26; border: 1px solid #2e2e3a; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .req-info { flex: 1; }
+        .req-username { font-size: 13px; color: #eee; font-weight: 500; }
+        .req-team { font-size: 11px; color: #FF7020; margin-top: 2px; }
+        .req-date { font-size: 10px; color: #555; margin-top: 2px; }
+        .req-actions { display: flex; gap: 8px; }
+        .btn-approve { background: #0d2210; color: #4caf50; border: 1px solid #4caf50; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-approve:hover { background: #4caf50; color: #fff; }
+        .btn-reject { background: #1a0808; color: #e57373; border: 1px solid #e57373; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-reject:hover { background: #e57373; color: #fff; }
+        .badge-pending { background: #1a1a08; color: #ffb300; font-size: 10px; padding: 2px 8px; border-radius: 6px; }
+        .badge-approved { background: #0d2210; color: #4caf50; font-size: 10px; padding: 2px 8px; border-radius: 6px; }
+        .badge-rejected { background: #1a0808; color: #e57373; font-size: 10px; padding: 2px 8px; border-radius: 6px; }
+        .empty-state { text-align: center; padding: 40px; color: #555; font-size: 13px; }
+        .warning-box { background: #1a1008; border: 1px solid #3d2e10; border-left: 4px solid #FF7020; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #FF7020; margin-bottom: 16px; }
+        .error-msg { background:#2a0a0a; border:1px solid #c0392b; border-radius:8px; padding:10px 14px; margin-bottom:14px; color:#e74c3c; font-size:13px; }
+        .success-msg { background:#0d2210; border:1px solid #4caf50; border-radius:8px; padding:10px 14px; margin-bottom:14px; color:#4caf50; font-size:13px; }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="top-bar-left">E-Sports Club Management System</div>
+    <div class="top-bar-right">
+        <div class="top-user">
+            <div class="top-avatar" th:text="${loggedUser != null ? #strings.toUpperCase(#strings.substring(loggedUser.username, 0, 2)) : '?'}">?</div>
+            <div>
+                <div class="top-username" th:text="${loggedUser?.username}"></div>
+                <div class="top-role" th:text="${loggedUser?.role}"></div>
+            </div>
+        </div>
+        <a th:href="@{/logout}" class="top-logout">🚪 Sign Out</a>
+    </div>
+</div>
+
+<div class="sidebar">
+    <div class="sb-logo">
+        <div class="sidebar-mini-logo">
+            <div class="sidebar-mini-mark">ESC</div>
+            <div class="sidebar-mini-text">
+                <span>ESports</span>
+                <small>Club</small>
+            </div>
+        </div>
+    </div>
+    <div class="nav-section">GENERAL</div>
+    <a class="nav-item" th:href="@{/dashboard}">📊 Dashboard</a>
+    <div class="nav-section">MANAGEMENT</div>
+    <a class="nav-item" th:href="@{/teams}">👥 Teams</a>
+    <a class="nav-item" th:href="@{/games}">🎮 Games</a>
+    <a class="nav-item" th:href="@{/tournaments}">🏆 Tournaments</a>
+    <a class="nav-item" th:href="@{/matches}">⚔️ Matches</a>
+    <a th:if="${loggedUser?.role == 'ADMIN'}" class="nav-item" th:href="@{/users}">👤 Users</a>
+    <div class="nav-section">REQUESTS</div>
+    <a class="nav-item active" th:href="@{/team-requests}">📨 Team Requests</a>
+    <div class="nav-section">ACCOUNT</div>
+    <a class="nav-item" th:href="@{/profile}">🪪 Profile</a>
+    <div class="nav-section">ANALYTICS</div>
+    <a class="nav-item" th:href="@{/reports}">📈 Reports</a>
+</div>
+
+<div class="main main-with-topbar">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Team Requests & Notifications</div>
+            <div class="page-sub" th:if="${loggedUser?.role == 'COACH'}">
+                Managing requests for: <span style="color:#FF7020;" th:text="${loggedUser?.teamName}"></span>
+            </div>
+            <div class="page-sub" th:if="${loggedUser?.role == 'ADMIN'}">Approve or reject all system team join requests</div>
+            <div class="page-sub" th:if="${loggedUser?.role == 'MEMBER'}">Track your active team applications</div>
+        </div>
+        <div style="background:#1f1208;border:1px solid #3d2e10;border-radius:8px;padding:8px 14px;font-size:12px;color:#FF7020;">
+            <span th:text="${pendingRequests.size()}">0</span> requests listed
+        </div>
+    </div>
+
+    <!-- Mesajlar -->
+    <div th:if="${param.success == 'submitted'}" class="success-msg">
+        ✅ Your team application has been submitted successfully!
+    </div>
+    <div th:if="${param.error == 'inactiveteam'}" class="error-msg">
+        🚫 This team is inactive and not accepting new members. Please choose an active team.
+    </div>
+    <div th:if="${param.error == 'pending'}" class="error-msg">
+        ⏳ You already have a pending team request. Please wait for it to be reviewed.
+    </div>
+    <div th:if="${param.error == 'notallowed'}" class="error-msg">
+        🚫 Only MEMBER accounts can submit team join requests.
+    </div>
+
+    <!-- Coach takımı yoksa uyarı -->
+    <div th:if="${noTeamWarning}" class="warning-box">
+        ⚠️ You are not assigned to a team yet. Contact an admin to get assigned to a team before managing requests.
+    </div>
+
+    <!-- MEMBER — Başvuru formu (sadece ACTIVE takımlar) -->
+    <div class="panel" th:if="${loggedUser?.role == 'MEMBER'}" style="margin-bottom: 20px;">
+        <div class="panel-title" style="color: #FF7020;">➕ Apply for a Team</div>
+        <form th:action="@{/team-requests/submit}" method="post" style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
+            <label style="color: #ccc; font-size: 13px;">Choose Team:</label>
+            <select name="teamName" required style="padding: 10px; background: #14141a; color: #fff; border: 1px solid #333; border-radius: 6px; min-width: 220px;">
+                <option value="">-- Select a team --</option>
+                <option th:each="team : ${availableTeams}"
+                        th:value="${team.name}"
+                        th:text="${team.name}">
+                </option>
+            </select>
+            <button type="submit" style="padding: 10px 20px; background: #FF7020; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Submit Application</button>
+        </form>
+        <div style="font-size:11px; color:#555; margin-top:8px;">
+            ℹ️ Only active teams are shown. Inactive teams do not accept new members.
+        </div>
+    </div>
+
+    <!-- Pending istekler -->
+    <div class="panel">
+        <div class="panel-title">⏳ Active / Pending Notifications</div>
+        <div th:if="${pendingRequests.empty}" class="empty-state">
+            <div style="font-size:32px;margin-bottom:8px;">✅</div>
+            No pending notifications for your account role.
+        </div>
+
+        <div th:each="req : ${pendingRequests}" class="req-card">
+            <div class="req-info">
+                <div class="req-username">Applicant: <span th:text="${req.username != null ? req.username : 'User ID: ' + req.userId}"></span></div>
+                <div class="req-team">→ Target Team: <strong th:text="${req.teamName}"></strong></div>
+                <div class="req-date" th:text="${req.requestedAt}"></div>
+            </div>
+            <div class="req-actions" th:if="${loggedUser?.role == 'ADMIN' or loggedUser?.role == 'COACH'}">
+                <form th:action="@{/team-requests/approve/{id}(id=${req.id})}" method="post">
+                    <button class="btn-approve" type="submit">✓ Approve</button>
+                </form>
+                <form th:action="@{/team-requests/reject/{id}(id=${req.id})}" method="post">
+                    <button class="btn-reject" type="submit">✗ Reject</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geçmiş -->
+    <div class="panel">
+        <div class="panel-title">📋 Application History Log</div>
+        <table>
+            <tr>
+                <th>Applicant User</th>
+                <th>Target Team</th>
+                <th>Requested Date</th>
+                <th>Current Status</th>
+                <th>Reviewed By</th>
+            </tr>
+            <tr th:each="req : ${allRequests}">
+                <td th:text="${req.username != null ? req.username : 'User ID: ' + req.userId}"></td>
+                <td th:text="${req.teamName}"></td>
+                <td th:text="${req.requestedAt}"></td>
+                <td>
+                    <span th:if="${req.status == 'PENDING'}" class="badge-pending">Pending</span>
+                    <span th:if="${req.status == 'APPROVED'}" class="badge-approved">Approved</span>
+                    <span th:if="${req.status == 'REJECTED'}" class="badge-rejected">Rejected</span>
+                </td>
+                <td style="font-size:11px;color:#666;" th:text="${req.reviewedBy ?: '-'}"></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('input[required], select[required]').forEach(function (field) {
+        field.addEventListener('invalid', function () {
+            field.setCustomValidity('Please fill out this field.');
+        });
+        field.addEventListener('input', function () { field.setCustomValidity(''); });
+        field.addEventListener('change', function () { field.setCustomValidity(''); });
+    });
+</script>
+</body>
+</html>
